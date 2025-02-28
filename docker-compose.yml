@@ -1,0 +1,63 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - VITE_APP_TITLE=${VITE_APP_TITLE}
+        - VITE_APP_DOMAIN=${VITE_APP_DOMAIN}
+    env_file:
+      - .env
+    ports:
+      - "${APP_PORT}:3000"
+    depends_on:
+      migration:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    networks:
+      - shadyfile_network
+
+  migration:
+    build:
+      context: .
+      dockerfile: Dockerfile.migrate
+      args:
+        - NODE_ENV=${NODE_ENV}
+        - POSTGRES_USER=${POSTGRES_USER}
+        - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+        - POSTGRES_DB=${POSTGRES_DB}
+        - POSTGRES_PORT=${POSTGRES_PORT}
+        - DATABASE_URL=${DATABASE_URL}
+        - APP_PORT=${APP_PORT}
+        - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - shadyfile_network
+
+  db:
+    image: postgres:latest
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    env_file:
+      - .env
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    restart: unless-stopped
+    networks:
+      - shadyfile_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+
+networks:
+  shadyfile_network:
+    name: shadyfile_network

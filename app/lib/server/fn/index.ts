@@ -1,0 +1,42 @@
+import { ThemeEnum, themeSchema, type Theme } from "@/lib";
+import { redirect } from "@tanstack/react-router";
+import { createServerFn } from "@tanstack/react-start";
+import { getCookie, setCookie } from "@tanstack/react-start/server";
+import { auth } from "../auth";
+import { assertRequestMiddleware, authMiddleware } from "../middleware";
+
+export const getTheme = createServerFn({ method: "GET" }).handler(() => {
+  const theme = themeSchema.parse(getCookie("theme"));
+
+  setCookie("theme", theme, {
+    maxAge: 30 * 24 * 60 * 60,
+  });
+
+  return theme;
+});
+
+export const setTheme = createServerFn({ method: "POST" })
+  .validator((theme: Theme) => ThemeEnum.parse(theme))
+  .handler(async ({ data }) => {
+    setCookie("theme", data, {
+      maxAge: 30 * 24 * 60 * 60,
+    });
+  });
+
+export const getSession = createServerFn()
+  .middleware([assertRequestMiddleware])
+  .handler(async ({ context }) => {
+    return auth.api.getSession({
+      headers: context.request.headers,
+    });
+  });
+
+export const signOut = createServerFn()
+  .middleware([assertRequestMiddleware, authMiddleware])
+  .handler(async ({ context }) => {
+    await auth.api.signOut({ headers: context.request.headers });
+
+    throw redirect({
+      href: "/",
+    });
+  });
