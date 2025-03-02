@@ -1,18 +1,19 @@
 import { type Nullable, type Theme, ThemeEnum } from "@/lib";
 import { setTheme } from "@/lib/server/fn";
-import { useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
   createContext,
   type PropsWithChildren,
   useContext,
+  useEffect,
   useMemo,
+  useState,
 } from "react";
 
 type ThemeContextType = {
   theme: Theme;
   isDark: boolean;
-  switchTheme: (theme: Theme) => Promise<void>;
+  switchTheme: (theme: Theme) => void;
 };
 
 const ThemeContext = createContext<Nullable<ThemeContextType>>(null);
@@ -28,23 +29,29 @@ export function useTheme() {
 }
 
 export function ThemeProvider({
-  theme,
+  theme: serverTheme,
   children,
 }: PropsWithChildren<{ theme: Theme }>) {
-  const router = useRouter();
+  const setThemeServerFn = useServerFn(setTheme);
 
-  const setThemeFn = useServerFn(setTheme);
+  const [clientTheme, setClientTheme] = useState<Theme>(serverTheme);
 
-  const isDark = useMemo(() => theme === ThemeEnum.enum.dark, [theme]);
+  const isDark = useMemo(
+    () => clientTheme === ThemeEnum.enum.dark,
+    [clientTheme],
+  );
 
-  async function switchTheme(theme: Theme) {
-    await setThemeFn({ data: theme });
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDark);
+  }, [isDark]);
 
-    await router.invalidate();
+  function switchTheme(theme: Theme) {
+    setClientTheme(theme);
+    setThemeServerFn({ data: theme });
   }
 
   return (
-    <ThemeContext.Provider value={{ theme, isDark, switchTheme }}>
+    <ThemeContext.Provider value={{ theme: clientTheme, isDark, switchTheme }}>
       {children}
     </ThemeContext.Provider>
   );

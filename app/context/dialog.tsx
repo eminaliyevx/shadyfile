@@ -43,7 +43,7 @@ export function useDialog() {
 export function DialogProvider({ children }: PropsWithChildren) {
   const [dialogs, setDialogs] = useState<DialogInstance[]>([]);
 
-  function open(options: DialogOptions): string {
+  function open(options: DialogOptions) {
     const id = options.id ?? crypto.randomUUID();
 
     setDialogs((dialogs) => [
@@ -58,7 +58,7 @@ export function DialogProvider({ children }: PropsWithChildren) {
     return id;
   }
 
-  function close(id: string): string {
+  function close(id: string) {
     setDialogs((dialogs) =>
       dialogs.map((dialog) =>
         dialog.id === id ? { ...dialog, isOpen: false } : dialog,

@@ -1,12 +1,16 @@
 import { useDialog, useSession } from "@/context";
 import { LogoutAlertDialog } from "@/features/auth";
 import { getInitialsFromName, selfOrUndefined } from "@/lib/utils";
-import { LogOutIcon } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { LogOut, Settings } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 
@@ -38,9 +42,44 @@ export function UserDropdown() {
         </Avatar>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent>
+      <DropdownMenuContent align="end" className="w-50">
+        <DropdownMenuLabel>
+          <div className="flex items-center gap-2">
+            <Avatar className="size-10">
+              <AvatarImage
+                src={selfOrUndefined(session?.user.image)}
+                alt={session?.user.name}
+              />
+
+              <AvatarFallback>
+                {session?.user.name
+                  ? getInitialsFromName(session.user.name)
+                  : ANONYMOUS_INITIALS}
+              </AvatarFallback>
+            </Avatar>
+
+            <div className="grid flex-1">
+              <span className="font-semibold">{session?.user.name}</span>
+              <span className="text-xs">@{session?.user.username}</span>
+            </div>
+          </div>
+        </DropdownMenuLabel>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuGroup>
+          <DropdownMenuItem asChild>
+            <Link to="/settings">
+              <Settings />
+              Settings
+            </Link>
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+
+        <DropdownMenuSeparator />
+
         <DropdownMenuItem onClick={openLogoutDialog}>
-          <LogOutIcon className="size-4" />
+          <LogOut />
           Log out
         </DropdownMenuItem>
       </DropdownMenuContent>

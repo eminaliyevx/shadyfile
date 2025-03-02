@@ -4,6 +4,7 @@ import { DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -77,7 +78,7 @@ export function AuthDialog({ dialog }: DialogProps) {
       onRequest: () => {
         setLoading(true);
       },
-      onSuccess: async () => {
+      onSuccess: () => {
         router.navigate({ to: "/dashboard" });
       },
       onError: ({ error }) => {
@@ -101,7 +102,7 @@ export function AuthDialog({ dialog }: DialogProps) {
         onRequest: () => {
           setLoading(true);
         },
-        onSuccess: async () => {
+        onSuccess: () => {
           router.navigate({ to: "/dashboard" });
         },
         onError: ({ error }) => {
@@ -208,6 +209,11 @@ export function AuthDialog({ dialog }: DialogProps) {
                       <Input {...field} />
                     </FormControl>
 
+                    <FormDescription>
+                      This is your private display name. Refrain from using your
+                      real name for maximum privacy.
+                    </FormDescription>
+
                     <FormMessage />
                   </FormItem>
                 )}
@@ -223,6 +229,12 @@ export function AuthDialog({ dialog }: DialogProps) {
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
+
+                    <FormDescription>
+                      This is your public display name and cannot be changed
+                      later. Refrain from using your real name for maximum
+                      privacy.
+                    </FormDescription>
 
                     <FormMessage />
                   </FormItem>

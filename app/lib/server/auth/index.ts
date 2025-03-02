@@ -6,6 +6,7 @@ import { account, session, user, verification } from "../db/schema";
 
 export const auth = betterAuth({
   emailAndPassword: { enabled: true },
+  user: { deleteUser: { enabled: true } },
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: { user, session, account, verification },

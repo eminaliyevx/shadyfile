@@ -6,7 +6,7 @@ export function Layout({ children }: PropsWithChildren) {
     <div>
       <Header />
 
-      {children}
+      <main>{children}</main>
     </div>
   );
 }
