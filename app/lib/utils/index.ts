@@ -18,7 +18,7 @@ export function getErrorMessage<T extends keyof typeof messages.errors>(
   type: T,
   ...params: Parameters<(typeof messages.errors)[T]>
 ) {
-  return (messages.errors[type] as (...args: any[]) => string)(...params);
+  return (messages.errors[type] as (...args: unknown[]) => string)(...params);
 }
 
 export function selfOrUndefined<T>(value?: Nullish<T>) {

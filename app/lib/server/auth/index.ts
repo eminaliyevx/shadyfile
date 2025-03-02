@@ -1,15 +1,29 @@
+import { env } from "@/lib/env/server";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { username } from "better-auth/plugins";
+import { twoFactor, username } from "better-auth/plugins";
 import { db } from "../db";
-import { account, session, user, verification } from "../db/schema";
+import {
+  account,
+  session,
+  twoFactor as twoFactorSchema,
+  user,
+  verification,
+} from "../db/schema";
 
 export const auth = betterAuth({
+  appName: env.APP_TITLE,
   emailAndPassword: { enabled: true },
   user: { deleteUser: { enabled: true } },
   database: drizzleAdapter(db, {
     provider: "pg",
-    schema: { user, session, account, verification },
+    schema: {
+      user,
+      session,
+      account,
+      verification,
+      twoFactor: twoFactorSchema,
+    },
   }),
-  plugins: [username()],
+  plugins: [username(), twoFactor()],
 });

@@ -15,7 +15,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/input";
 import { useDialog } from "@/context";
 import { useAuth } from "@/hooks";
 import { DialogProps, getErrorMessage } from "@/lib";
@@ -74,8 +74,8 @@ export function DeleteAccountDialog({ dialog }: DialogProps) {
       <DialogTitle>Are you sure you want to delete your account?</DialogTitle>
 
       <DialogDescription>
-        This action will delete your account and all associated data. This
-        action is irreversible.
+        Deleting your account will permanently remove all your data from our
+        servers. This action is irreversible.
       </DialogDescription>
 
       <Form {...form}>
@@ -88,7 +88,7 @@ export function DeleteAccountDialog({ dialog }: DialogProps) {
                 <FormLabel>Password</FormLabel>
 
                 <FormControl>
-                  <Input type="password" {...field} />
+                  <PasswordInput {...field} />
                 </FormControl>
 
                 <FormDescription>
@@ -108,8 +108,9 @@ export function DeleteAccountDialog({ dialog }: DialogProps) {
         </DialogClose>
 
         <Button
-          variant="destructive"
+          type="submit"
           form="deleteAccountForm"
+          variant="destructive"
           loading={loading}
         >
           Delete account

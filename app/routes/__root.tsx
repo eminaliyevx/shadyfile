@@ -1,4 +1,4 @@
-import { Layout } from "@/components";
+import { Layout, NavigationProgress } from "@/components";
 import { Toaster } from "@/components/ui/sonner";
 import { DialogProvider, SessionProvider, ThemeProvider } from "@/context";
 import { cn, ThemeEnum } from "@/lib";
@@ -10,12 +10,13 @@ import {
   Outlet,
   Scripts,
 } from "@tanstack/react-router";
+import { LoadingBarContainer } from "react-top-loading-bar";
 
 export const Route = createRootRoute({
   head: () => ({
     meta: [
       {
-        charSet: "utf-8",
+        charSet: "utf8",
       },
       {
         name: "viewport",
@@ -65,9 +66,17 @@ export const Route = createRootRoute({
     try {
       const [theme, session] = await Promise.all([getTheme(), getSession()]);
 
-      return { theme, session, isAuthenticated: !!session };
+      return {
+        theme,
+        session,
+        isAuthenticated: !!session,
+      };
     } catch {
-      return { theme: ThemeEnum.Enum.dark, session: null };
+      return {
+        theme: ThemeEnum.Enum.dark,
+        session: null,
+        isAuthenticated: false,
+      };
     }
   },
 });
@@ -84,13 +93,17 @@ function RootComponent() {
       <body>
         <ThemeProvider theme={theme}>
           <SessionProvider session={session}>
-            <DialogProvider>
-              <Layout>
-                <Outlet />
-              </Layout>
-            </DialogProvider>
+            <LoadingBarContainer props={{ color: "var(--foreground)" }}>
+              <NavigationProgress>
+                <DialogProvider>
+                  <Layout>
+                    <Outlet />
+                  </Layout>
+                </DialogProvider>
 
-            <Toaster closeButton />
+                <Toaster closeButton />
+              </NavigationProgress>
+            </LoadingBarContainer>
           </SessionProvider>
         </ThemeProvider>
         <Scripts />

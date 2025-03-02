@@ -31,7 +31,7 @@ export function UserDropdown() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Avatar className="size-10">
+        <Avatar className="size-10 cursor-pointer">
           <AvatarImage src={selfOrUndefined(session?.user.image)} />
 
           <AvatarFallback>
@@ -68,7 +68,7 @@ export function UserDropdown() {
         <DropdownMenuSeparator />
 
         <DropdownMenuGroup>
-          <DropdownMenuItem asChild>
+          <DropdownMenuItem className="cursor-pointer" asChild>
             <Link to="/settings">
               <Settings />
               Settings
@@ -78,7 +78,7 @@ export function UserDropdown() {
 
         <DropdownMenuSeparator />
 
-        <DropdownMenuItem onClick={openLogoutDialog}>
+        <DropdownMenuItem className="cursor-pointer" onClick={openLogoutDialog}>
           <LogOut />
           Log out
         </DropdownMenuItem>

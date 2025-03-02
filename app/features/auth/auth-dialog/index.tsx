@@ -1,6 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { DialogContent, DialogTitle } from "@/components/ui/dialog";
+import {
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -10,9 +15,10 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { Input, PasswordInput } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDialog } from "@/context";
+import { VerifyTotpDialog } from "@/features/settings";
 import { useAuth } from "@/hooks";
 import { DialogProps } from "@/lib";
 import { env } from "@/lib/env/client";
@@ -51,7 +57,9 @@ export function AuthDialog({ dialog }: DialogProps) {
 
   const { authClient } = useAuth();
 
-  const { close } = useDialog();
+  const { open, close } = useDialog();
+
+  const [tab, setTab] = useState<"login" | "signup">("login");
 
   const [loading, setLoading] = useState(false);
 
@@ -78,8 +86,14 @@ export function AuthDialog({ dialog }: DialogProps) {
       onRequest: () => {
         setLoading(true);
       },
-      onSuccess: () => {
-        router.navigate({ to: "/dashboard" });
+      onSuccess: ({ data }) => {
+        if (data.twoFactorRedirect) {
+          open({
+            content: (dialog) => <VerifyTotpDialog dialog={dialog} />,
+          });
+        } else {
+          router.navigate({ to: "/dashboard" });
+        }
       },
       onError: ({ error }) => {
         toast.error(error.message);
@@ -119,11 +133,11 @@ export function AuthDialog({ dialog }: DialogProps) {
 
   return (
     <DialogContent aria-describedby={undefined}>
-      <DialogTitle className="mb-4 text-center">
-        {env.VITE_APP_TITLE}
-      </DialogTitle>
+      <DialogHeader className="mb-4">
+        <DialogTitle className="text-center">{env.VITE_APP_TITLE}</DialogTitle>
+      </DialogHeader>
 
-      <Tabs defaultValue="login">
+      <Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)}>
         <TabsList className="mb-4 grid w-full grid-cols-2">
           <TabsTrigger value="login">Login</TabsTrigger>
 
@@ -133,6 +147,7 @@ export function AuthDialog({ dialog }: DialogProps) {
         <TabsContent value="login">
           <Form {...loginForm}>
             <form
+              id="loginForm"
               onSubmit={loginForm.handleSubmit(handleLogin)}
               className="space-y-4"
             >
@@ -160,7 +175,7 @@ export function AuthDialog({ dialog }: DialogProps) {
                     <FormLabel>Password</FormLabel>
 
                     <FormControl>
-                      <Input type="password" {...field} />
+                      <PasswordInput {...field} />
                     </FormControl>
 
                     <FormMessage />
@@ -184,10 +199,6 @@ export function AuthDialog({ dialog }: DialogProps) {
                   </FormItem>
                 )}
               />
-
-              <Button type="submit" className="w-full" loading={loading}>
-                Login
-              </Button>
             </form>
           </Form>
         </TabsContent>
@@ -195,8 +206,9 @@ export function AuthDialog({ dialog }: DialogProps) {
         <TabsContent value="signup">
           <Form {...signupForm}>
             <form
-              onSubmit={signupForm.handleSubmit(handleSignup)}
+              id="signupForm"
               className="space-y-4"
+              onSubmit={signupForm.handleSubmit(handleSignup)}
             >
               <FormField
                 control={signupForm.control}
@@ -249,21 +261,28 @@ export function AuthDialog({ dialog }: DialogProps) {
                     <FormLabel>Password</FormLabel>
 
                     <FormControl>
-                      <Input type="password" {...field} />
+                      <PasswordInput {...field} />
                     </FormControl>
 
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
-              <Button type="submit" className="w-full" loading={loading}>
-                Sign up
-              </Button>
             </form>
           </Form>
         </TabsContent>
       </Tabs>
+
+      <DialogFooter>
+        <Button
+          type="submit"
+          form={tab === "login" ? "loginForm" : "signupForm"}
+          className="w-full"
+          loading={loading}
+        >
+          {tab === "login" ? "Login" : "Sign up"}
+        </Button>
+      </DialogFooter>
     </DialogContent>
   );
 }

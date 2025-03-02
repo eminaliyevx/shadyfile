@@ -10,6 +10,7 @@ export const env = createEnv({
     POSTGRES_DB: z.string().min(1),
     POSTGRES_PORT: z.coerce.number(),
     DATABASE_URL: z.string().url(),
+    APP_TITLE: z.string().min(1),
     APP_PORT: z.coerce.number(),
     BETTER_AUTH_SECRET: z.string().min(1),
   },

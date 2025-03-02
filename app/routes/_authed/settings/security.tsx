@@ -1,38 +1,41 @@
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { useDialog } from "@/context";
-import { DeleteAccountDialog } from "@/features/settings";
+import { useDialog, useSession } from "@/context";
+import {
+  ChangePasswordDialog,
+  DeleteAccountDialog,
+  ManageTwoFactorDialog,
+} from "@/features/settings";
+import { cn } from "@/lib";
 import { createFileRoute } from "@tanstack/react-router";
 import { LockKeyhole, UserRoundX } from "lucide-react";
-import { z } from "zod";
 
 export const Route = createFileRoute("/_authed/settings/security")({
   component: Security,
 });
 
-const passwordSchema = z
-  .object({
-    currentPassword: z.string().min(1, {
-      message: "Current password is required",
-    }),
-    newPassword: z.string().min(8, {
-      message: "Password must be at least 8 characters",
-    }),
-    confirmPassword: z.string().min(1, {
-      message: "Please confirm your password",
-    }),
-  })
-  .refine((data) => data.newPassword === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
-  });
-
 function Security() {
+  const { session } = useSession();
+
   const { open } = useDialog();
 
   function openDeleteAccountDialog() {
     open({
       content: (dialog) => <DeleteAccountDialog dialog={dialog} />,
+    });
+  }
+
+  function openChangePasswordDialog() {
+    open({
+      content: (dialog) => <ChangePasswordDialog dialog={dialog} />,
+    });
+  }
+
+  function openManageTwoFactorDialog(enabled?: boolean) {
+    open({
+      content: (dialog) => (
+        <ManageTwoFactorDialog dialog={dialog} enabled={enabled} />
+      ),
     });
   }
 
@@ -42,7 +45,11 @@ function Security() {
 
       <Separator className="my-4" />
 
-      <Button variant="outline" className="mb-4 h-20 w-full justify-between">
+      <Button
+        variant="outline"
+        className="mb-4 h-20 w-full justify-between"
+        onClick={openChangePasswordDialog}
+      >
         <div className="grid text-left">
           <span className="text-lg">Change password</span>
           <span className="truncate text-sm text-muted-foreground">
@@ -53,6 +60,33 @@ function Security() {
         <LockKeyhole className="size-6" />
       </Button>
 
+      <div
+        className={cn(
+          buttonVariants({ variant: "outline" }),
+          "mb-4 h-20 w-full justify-between",
+        )}
+      >
+        <div className="grid text-left">
+          <span className="text-lg">Two-factor authentication</span>
+          <span className="truncate text-sm text-muted-foreground">
+            Add an extra layer of security to your account.
+          </span>
+        </div>
+
+        {session?.user.twoFactorEnabled ? (
+          <Button
+            variant="destructive"
+            onClick={() => openManageTwoFactorDialog(false)}
+          >
+            Disable
+          </Button>
+        ) : (
+          <Button onClick={() => openManageTwoFactorDialog(true)}>
+            Enable
+          </Button>
+        )}
+      </div>
+
       <Button
         variant="destructive"
         className="mb-4 h-20 w-full justify-between"
@@ -61,8 +95,7 @@ function Security() {
         <div className="grid text-left text-wrap">
           <span className="text-lg">Delete account</span>
           <span className="truncate text-sm">
-            Once you delete your account, you will not be able to access your
-            account or any of your data.
+            Permanently delete your account.
           </span>
         </div>
 
