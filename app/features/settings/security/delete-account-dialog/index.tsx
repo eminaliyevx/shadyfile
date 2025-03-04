@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/form";
 import { PasswordInput } from "@/components/ui/input";
 import { useDialog } from "@/context";
-import { useAuth } from "@/hooks";
+import { useAuth, useSession } from "@/hooks";
 import { DialogProps, getErrorMessage } from "@/lib";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "@tanstack/react-router";
@@ -34,6 +34,8 @@ const schema = z.object({
 
 export function DeleteAccountDialog({ dialog }: DialogProps) {
   const router = useRouter();
+
+  const { refetchSession } = useSession();
 
   const { authClient } = useAuth();
 
@@ -53,12 +55,14 @@ export function DeleteAccountDialog({ dialog }: DialogProps) {
       onRequest: () => {
         setLoading(true);
       },
-      onSuccess: () => {
+      onSuccess: async () => {
         close(dialog.id);
 
         toast.success("Your account has been deleted");
 
-        router.navigate({ to: "/" });
+        await refetchSession();
+
+        await router.navigate({ to: "/" });
       },
       onError: ({ error }) => {
         toast.error(error.message);

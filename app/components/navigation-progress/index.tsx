@@ -1,8 +1,8 @@
 import { useRouter } from "@tanstack/react-router";
-import { PropsWithChildren, useEffect } from "react";
+import { useEffect } from "react";
 import { useLoadingBar } from "react-top-loading-bar";
 
-export function NavigationProgress({ children }: PropsWithChildren) {
+export function NavigationProgress() {
   const router = useRouter();
 
   const { start, complete } = useLoadingBar({
@@ -25,5 +25,5 @@ export function NavigationProgress({ children }: PropsWithChildren) {
     };
   });
 
-  return <>{children}</>;
+  return <></>;
 }

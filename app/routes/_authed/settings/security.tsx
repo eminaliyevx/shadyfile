@@ -1,11 +1,12 @@
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { useDialog, useSession } from "@/context";
+import { useDialog } from "@/context";
 import {
   ChangePasswordDialog,
   DeleteAccountDialog,
   ManageTwoFactorDialog,
 } from "@/features/settings";
+import { useSession } from "@/hooks";
 import { cn } from "@/lib";
 import { createFileRoute } from "@tanstack/react-router";
 import { LockKeyhole, UserRoundX } from "lucide-react";

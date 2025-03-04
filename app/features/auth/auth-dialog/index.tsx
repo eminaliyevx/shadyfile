@@ -19,7 +19,7 @@ import { Input, PasswordInput } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDialog } from "@/context";
 import { VerifyTotpDialog } from "@/features/settings";
-import { useAuth } from "@/hooks";
+import { useAuth, useSession } from "@/hooks";
 import { DialogProps } from "@/lib";
 import { env } from "@/lib/env/client";
 import { getErrorMessage } from "@/lib/utils";
@@ -57,6 +57,8 @@ export function AuthDialog({ dialog }: DialogProps) {
 
   const { authClient } = useAuth();
 
+  const { refetchSession } = useSession();
+
   const { open, close } = useDialog();
 
   const [tab, setTab] = useState<"login" | "signup">("login");
@@ -86,13 +88,15 @@ export function AuthDialog({ dialog }: DialogProps) {
       onRequest: () => {
         setLoading(true);
       },
-      onSuccess: ({ data }) => {
+      onSuccess: async ({ data }) => {
         if (data.twoFactorRedirect) {
           open({
             content: (dialog) => <VerifyTotpDialog dialog={dialog} />,
           });
         } else {
-          router.navigate({ to: "/dashboard" });
+          await refetchSession();
+
+          await router.navigate({ to: "/dashboard" });
         }
       },
       onError: ({ error }) => {
@@ -116,8 +120,10 @@ export function AuthDialog({ dialog }: DialogProps) {
         onRequest: () => {
           setLoading(true);
         },
-        onSuccess: () => {
-          router.navigate({ to: "/dashboard" });
+        onSuccess: async () => {
+          await refetchSession();
+
+          await router.navigate({ to: "/dashboard" });
         },
         onError: ({ error }) => {
           toast.error(error.message);
@@ -243,9 +249,8 @@ export function AuthDialog({ dialog }: DialogProps) {
                     </FormControl>
 
                     <FormDescription>
-                      This is your public display name and cannot be changed
-                      later. Refrain from using your real name for maximum
-                      privacy.
+                      This is your public display name. Refrain from using your
+                      real name for maximum privacy.
                     </FormDescription>
 
                     <FormMessage />

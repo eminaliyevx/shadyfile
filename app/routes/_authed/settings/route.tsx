@@ -48,7 +48,7 @@ function Settings() {
         </CardHeader>
 
         <CardContent className="border-t pr-0 pl-0 lg:pr-6">
-          <SidebarProvider className="flex-col lg:flex-row">
+          <SidebarProvider className="min-h-auto flex-col lg:min-h-svh lg:flex-row">
             <Sidebar
               collapsible="none"
               className="w-full lg:min-h-svh lg:w-[var(--sidebar-width)]"

@@ -18,10 +18,9 @@ import {
 } from "@/components/ui/form";
 import { PasswordInput } from "@/components/ui/input";
 import { useDialog } from "@/context";
-import { useAuth } from "@/hooks";
+import { useAuth, useSession } from "@/hooks";
 import { DialogProps, getErrorMessage } from "@/lib";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -42,9 +41,9 @@ export function ManageTwoFactorDialog({
   dialog,
   enabled,
 }: ManageTwoFactorDialogProps) {
-  const router = useRouter();
-
   const { authClient } = useAuth();
+
+  const { refetchSession } = useSession();
 
   const { open, close } = useDialog();
 
@@ -96,7 +95,7 @@ export function ManageTwoFactorDialog({
 
             toast.success("Two-factor authentication disabled");
 
-            router.invalidate();
+            refetchSession();
           },
           onError: ({ error }) => {
             toast.error(error.message);

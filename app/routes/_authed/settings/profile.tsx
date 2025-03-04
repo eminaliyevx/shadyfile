@@ -10,11 +10,10 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { useSession } from "@/context";
-import { useAuth } from "@/hooks";
+import { useAuth, useSession } from "@/hooks";
 import { getErrorMessage, selfOrUndefined } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -34,9 +33,7 @@ const schema = z.object({
 });
 
 function Profile() {
-  const router = useRouter();
-
-  const { session } = useSession();
+  const { session, refetchSession } = useSession();
 
   const { authClient } = useAuth();
 
@@ -51,27 +48,24 @@ function Profile() {
   });
 
   async function handleSubmit(data: z.infer<typeof schema>) {
-    await authClient.updateUser(
-      { name: data.name },
-      {
-        onRequest: () => {
-          setLoading(true);
-        },
-        onSuccess: () => {
-          toast.success("Your profile has been updated");
-
-          form.reset(data);
-
-          router.invalidate();
-        },
-        onError: ({ error }) => {
-          toast.error(error.message);
-        },
-        onResponse: () => {
-          setLoading(false);
-        },
+    await authClient.updateUser(data, {
+      onRequest: () => {
+        setLoading(true);
       },
-    );
+      onSuccess: () => {
+        toast.success("Your profile has been updated");
+
+        form.reset(data);
+
+        refetchSession();
+      },
+      onError: ({ error }) => {
+        toast.error(error.message);
+      },
+      onResponse: () => {
+        setLoading(false);
+      },
+    });
   }
 
   return (
@@ -111,12 +105,15 @@ function Profile() {
                 <FormLabel>Username</FormLabel>
 
                 <FormControl>
-                  <Input {...field} disabled />
+                  <Input {...field} />
                 </FormControl>
 
                 <FormDescription>
-                  This is your public username. It cannot be changed.
+                  This is your public username. Refrain from using your real
+                  name for maximum privacy.
                 </FormDescription>
+
+                <FormMessage />
               </FormItem>
             )}
           />

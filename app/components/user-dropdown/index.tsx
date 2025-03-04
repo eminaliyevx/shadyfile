@@ -1,5 +1,6 @@
-import { useDialog, useSession } from "@/context";
+import { useDialog } from "@/context";
 import { LogoutAlertDialog } from "@/features/auth";
+import { useSession } from "@/hooks";
 import { getInitialsFromName, selfOrUndefined } from "@/lib/utils";
 import { Link } from "@tanstack/react-router";
 import { LogOut, Settings } from "lucide-react";
@@ -36,7 +37,7 @@ export function UserDropdown() {
 
           <AvatarFallback>
             {session?.user.name
-              ? getInitialsFromName(session.user.name)
+              ? getInitialsFromName(session.user.name).toLocaleUpperCase()
               : ANONYMOUS_INITIALS}
           </AvatarFallback>
         </Avatar>
@@ -53,7 +54,7 @@ export function UserDropdown() {
 
               <AvatarFallback>
                 {session?.user.name
-                  ? getInitialsFromName(session.user.name)
+                  ? getInitialsFromName(session.user.name).toLocaleUpperCase()
                   : ANONYMOUS_INITIALS}
               </AvatarFallback>
             </Avatar>

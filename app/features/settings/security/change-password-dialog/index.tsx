@@ -18,10 +18,9 @@ import {
 } from "@/components/ui/form";
 import { PasswordInput } from "@/components/ui/input";
 import { useDialog } from "@/context";
-import { useAuth } from "@/hooks";
+import { useAuth, useSession } from "@/hooks";
 import { DialogProps, getErrorMessage } from "@/lib";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -46,9 +45,9 @@ const schema = z
   });
 
 export function ChangePasswordDialog({ dialog }: DialogProps) {
-  const router = useRouter();
-
   const { authClient } = useAuth();
+
+  const { refetchSession } = useSession();
 
   const { close } = useDialog();
 
@@ -80,7 +79,7 @@ export function ChangePasswordDialog({ dialog }: DialogProps) {
 
           toast.success("Your password has been changed");
 
-          router.invalidate();
+          refetchSession();
         },
         onError: ({ error }) => {
           toast.error(error.message);

@@ -22,6 +22,7 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { useDialog } from "@/context/dialog";
+import { useSession } from "@/hooks";
 import { useAuth } from "@/hooks/use-auth";
 import { DialogProps, getErrorMessage } from "@/lib";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -49,6 +50,8 @@ export function VerifyTotpDialog({ dialog, totpUri }: VerifyTotpDialogProps) {
 
   const { authClient } = useAuth();
 
+  const { refetchSession } = useSession();
+
   const { close } = useDialog();
 
   const [loading, setLoading] = useState(false);
@@ -62,21 +65,22 @@ export function VerifyTotpDialog({ dialog, totpUri }: VerifyTotpDialogProps) {
 
   async function handleSubmit(data: z.infer<typeof schema>) {
     await authClient.twoFactor.verifyTotp(
-      // @ts-expect-error - missing type definition from better-auth
       { code: data.code, trustDevice: !!totpUri || data.trustDevice },
       {
         onRequest: () => {
           setLoading(true);
         },
-        onSuccess: () => {
+        onSuccess: async () => {
           close(dialog.id);
 
           if (totpUri) {
             toast.success("Two-factor authentication enabled");
 
-            router.invalidate();
+            refetchSession();
           } else {
-            router.navigate({ to: "/dashboard" });
+            await refetchSession();
+
+            await router.navigate({ to: "/dashboard" });
           }
         },
         onError: ({ error }) => {
@@ -146,23 +150,25 @@ export function VerifyTotpDialog({ dialog, totpUri }: VerifyTotpDialogProps) {
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="trustDevice"
-            render={({ field }) => (
-              <FormItem className="flex items-center justify-center gap-2">
-                <FormControl>
-                  <Checkbox
-                    className="size-6"
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
+          {!totpUri && (
+            <FormField
+              control={form.control}
+              name="trustDevice"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-center gap-2">
+                  <FormControl>
+                    <Checkbox
+                      className="size-6"
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
 
-                <FormLabel className="text-base">Trust this device</FormLabel>
-              </FormItem>
-            )}
-          />
+                  <FormLabel className="text-base">Trust this device</FormLabel>
+                </FormItem>
+              )}
+            />
+          )}
         </form>
       </Form>
 

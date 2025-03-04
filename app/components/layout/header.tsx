@@ -1,5 +1,6 @@
-import { useDialog, useSession } from "@/context";
+import { useDialog } from "@/context";
 import { AuthDialog } from "@/features/auth";
+import { useSession } from "@/hooks";
 import { env } from "@/lib/env/client";
 import { Link } from "@tanstack/react-router";
 import { ThemeSwitcher } from "../theme-switcher";

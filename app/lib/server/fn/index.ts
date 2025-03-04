@@ -1,5 +1,4 @@
 import { ThemeEnum, themeSchema, type Theme } from "@/lib";
-import { redirect } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { getCookie, setCookie } from "@tanstack/react-start/server";
 import { auth } from "../auth";
@@ -17,7 +16,7 @@ export const getTheme = createServerFn({ method: "GET" }).handler(() => {
 
 export const setTheme = createServerFn({ method: "POST" })
   .validator((theme: Theme) => ThemeEnum.parse(theme))
-  .handler(async ({ data }) => {
+  .handler(({ data }) => {
     setCookie("theme", data, {
       maxAge: 30 * 24 * 60 * 60,
     });
@@ -25,7 +24,7 @@ export const setTheme = createServerFn({ method: "POST" })
 
 export const getSession = createServerFn()
   .middleware([assertRequestMiddleware])
-  .handler(async ({ context }) => {
+  .handler(({ context }) => {
     return auth.api.getSession({
       headers: context.request.headers,
     });
@@ -33,10 +32,6 @@ export const getSession = createServerFn()
 
 export const signOut = createServerFn()
   .middleware([assertRequestMiddleware, authMiddleware])
-  .handler(async ({ context }) => {
-    await auth.api.signOut({ headers: context.request.headers });
-
-    throw redirect({
-      href: "/",
-    });
+  .handler(({ context }) => {
+    return auth.api.signOut({ headers: context.request.headers });
   });

@@ -1,88 +1,81 @@
 import { Layout, NavigationProgress } from "@/components";
 import { Toaster } from "@/components/ui/sonner";
-import { DialogProvider, SessionProvider, ThemeProvider } from "@/context";
+import { DialogProvider } from "@/context";
+import { useTheme } from "@/hooks";
 import { cn, ThemeEnum } from "@/lib";
-import { getSession, getTheme } from "@/lib/server/fn";
+import { queries } from "@/queries";
 import appCss from "@/styles/app.css?url";
+import { type QueryClient } from "@tanstack/react-query";
 import {
-  createRootRoute,
+  createRootRouteWithContext,
   HeadContent,
   Outlet,
   Scripts,
 } from "@tanstack/react-router";
 import { LoadingBarContainer } from "react-top-loading-bar";
 
-export const Route = createRootRoute({
-  head: () => ({
-    meta: [
-      {
-        charSet: "utf8",
-      },
-      {
-        name: "viewport",
-        content: "width=device-width, initial-scale=1",
-      },
-      {
-        title: "ShadyFile",
-      },
-      {
-        name: "apple-mobile-web-app-title",
-        content: "ShadyFile",
-      },
-    ],
-    links: [
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
-      {
-        rel: "icon",
-        type: "image/png",
-        href: "/favicon-96x96.png",
-        sizes: "96x96",
-      },
-      {
-        rel: "icon",
-        type: "image/svg+xml",
-        href: "/favicon.svg",
-      },
-      {
-        rel: "shortcut icon",
-        href: "/favicon.ico",
-      },
-      {
-        rel: "apple-touch-icon",
-        sizes: "180x180",
-        href: "/apple-touch-icon.png",
-      },
-      {
-        rel: "manifest",
-        href: "/site.webmanifest",
-      },
-    ],
-  }),
-  component: RootComponent,
-  beforeLoad: async () => {
-    try {
-      const [theme, session] = await Promise.all([getTheme(), getSession()]);
-
-      return {
-        theme,
-        session,
-        isAuthenticated: !!session,
-      };
-    } catch {
-      return {
-        theme: ThemeEnum.Enum.dark,
-        session: null,
-        isAuthenticated: false,
-      };
-    }
+export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
+  {
+    head: () => ({
+      meta: [
+        {
+          charSet: "utf8",
+        },
+        {
+          name: "viewport",
+          content: "width=device-width, initial-scale=1",
+        },
+        {
+          title: "ShadyFile",
+        },
+        {
+          name: "apple-mobile-web-app-title",
+          content: "ShadyFile",
+        },
+      ],
+      links: [
+        {
+          rel: "stylesheet",
+          href: appCss,
+        },
+        {
+          rel: "icon",
+          type: "image/png",
+          href: "/favicon-96x96.png",
+          sizes: "96x96",
+        },
+        {
+          rel: "icon",
+          type: "image/svg+xml",
+          href: "/favicon.svg",
+        },
+        {
+          rel: "shortcut icon",
+          href: "/favicon.ico",
+        },
+        {
+          rel: "apple-touch-icon",
+          sizes: "180x180",
+          href: "/apple-touch-icon.png",
+        },
+        {
+          rel: "manifest",
+          href: "/site.webmanifest",
+        },
+      ],
+    }),
+    component: RootComponent,
+    beforeLoad: async ({ context }) => {
+      await Promise.all([
+        context.queryClient.ensureQueryData(queries.theme()),
+        context.queryClient.ensureQueryData(queries.session()),
+      ]);
+    },
   },
-});
+);
 
 function RootComponent() {
-  const { theme, session } = Route.useRouteContext();
+  const { theme } = useTheme();
 
   return (
     <html lang="en" className={cn({ dark: theme === ThemeEnum.Enum.dark })}>
@@ -91,21 +84,17 @@ function RootComponent() {
       </head>
 
       <body>
-        <ThemeProvider theme={theme}>
-          <SessionProvider session={session}>
-            <LoadingBarContainer props={{ color: "var(--foreground)" }}>
-              <NavigationProgress>
-                <DialogProvider>
-                  <Layout>
-                    <Outlet />
-                  </Layout>
-                </DialogProvider>
+        <LoadingBarContainer props={{ color: "var(--foreground)" }}>
+          <NavigationProgress />
 
-                <Toaster closeButton />
-              </NavigationProgress>
-            </LoadingBarContainer>
-          </SessionProvider>
-        </ThemeProvider>
+          <DialogProvider>
+            <Layout>
+              <Outlet />
+            </Layout>
+          </DialogProvider>
+
+          <Toaster closeButton />
+        </LoadingBarContainer>
         <Scripts />
       </body>
     </html>
