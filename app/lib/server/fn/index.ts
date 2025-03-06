@@ -35,3 +35,11 @@ export const signOut = createServerFn()
   .handler(({ context }) => {
     return auth.api.signOut({ headers: context.request.headers });
   });
+
+export const getBackupCodes = createServerFn()
+  .middleware([authMiddleware])
+  .handler(({ context }) => {
+    return auth.api.viewBackupCodes({
+      body: { userId: context.session.user.id },
+    });
+  });

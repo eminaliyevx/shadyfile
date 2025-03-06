@@ -29,6 +29,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import { VerifyBackupCodeDialog } from "../verify-backup-code-dialog";
 
 const loginSchema = z.object({
   username: z.string().min(1, {
@@ -137,6 +138,12 @@ export function AuthDialog({ dialog }: DialogProps) {
     );
   }
 
+  function openVerifyBackupCodeDialog() {
+    open({
+      content: (dialog) => <VerifyBackupCodeDialog dialog={dialog} />,
+    });
+  }
+
   return (
     <DialogContent aria-describedby={undefined}>
       <DialogHeader className="mb-4">
@@ -178,7 +185,17 @@ export function AuthDialog({ dialog }: DialogProps) {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <div className="flex items-center">
+                      <FormLabel>Password</FormLabel>
+
+                      <Button
+                        variant="link"
+                        className="ml-auto"
+                        onClick={openVerifyBackupCodeDialog}
+                      >
+                        Forgot your password?
+                      </Button>
+                    </div>
 
                     <FormControl>
                       <PasswordInput {...field} />

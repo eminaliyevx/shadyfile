@@ -1,3 +1,4 @@
+export * from "./security/backup-codes-dialog";
 export * from "./security/change-password-dialog";
 export * from "./security/delete-account-dialog";
 export * from "./security/manage-two-factor-dialog";
