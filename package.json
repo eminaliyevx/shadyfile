@@ -8,7 +8,8 @@
     "start": "vinxi start",
     "db:generate": "drizzle-kit generate",
     "db:migrate:dev": "dotenvx run -f .env.development -- drizzle-kit migrate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push"
   },
   "license": "ISC",
   "dependencies": {
