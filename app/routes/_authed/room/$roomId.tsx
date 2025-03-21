@@ -89,7 +89,10 @@ type FileMessage = {
 
 const CHUNK_SIZE = 64 * 1024;
 
-const WEBSOCKET_URL = "ws://localhost:3000/_ws";
+const WEBSOCKET_URL =
+  typeof window !== "undefined"
+    ? `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/_ws`
+    : "";
 
 export const Route = createFileRoute("/_authed/room/$roomId")({
   component: RoomComponent,
