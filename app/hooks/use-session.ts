@@ -1,4 +1,4 @@
-import { queries } from "@/queries";
+import { queries } from "@/lib";
 import { useSuspenseQuery } from "@tanstack/react-query";
 
 export const useSession = () => {

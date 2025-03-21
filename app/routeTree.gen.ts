@@ -16,8 +16,12 @@ import { Route as IndexImport } from './routes/index'
 import { Route as AuthedLogoutImport } from './routes/_authed/logout'
 import { Route as AuthedDashboardImport } from './routes/_authed/dashboard'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings/route'
+import { Route as AuthedShareIndexImport } from './routes/_authed/share/index'
+import { Route as AuthedRoomIndexImport } from './routes/_authed/room/index'
+import { Route as AuthedShareRoomIdImport } from './routes/_authed/share/$roomId'
 import { Route as AuthedSettingsSecurityImport } from './routes/_authed/settings/security'
 import { Route as AuthedSettingsProfileImport } from './routes/_authed/settings/profile'
+import { Route as AuthedRoomRoomIdImport } from './routes/_authed/room/$roomId'
 
 // Create/Update Routes
 
@@ -50,6 +54,24 @@ const AuthedSettingsRouteRoute = AuthedSettingsRouteImport.update({
   getParentRoute: () => AuthedRoute,
 } as any)
 
+const AuthedShareIndexRoute = AuthedShareIndexImport.update({
+  id: '/share/',
+  path: '/share/',
+  getParentRoute: () => AuthedRoute,
+} as any)
+
+const AuthedRoomIndexRoute = AuthedRoomIndexImport.update({
+  id: '/room/',
+  path: '/room/',
+  getParentRoute: () => AuthedRoute,
+} as any)
+
+const AuthedShareRoomIdRoute = AuthedShareRoomIdImport.update({
+  id: '/share/$roomId',
+  path: '/share/$roomId',
+  getParentRoute: () => AuthedRoute,
+} as any)
+
 const AuthedSettingsSecurityRoute = AuthedSettingsSecurityImport.update({
   id: '/security',
   path: '/security',
@@ -60,6 +82,12 @@ const AuthedSettingsProfileRoute = AuthedSettingsProfileImport.update({
   id: '/profile',
   path: '/profile',
   getParentRoute: () => AuthedSettingsRouteRoute,
+} as any)
+
+const AuthedRoomRoomIdRoute = AuthedRoomRoomIdImport.update({
+  id: '/room/$roomId',
+  path: '/room/$roomId',
+  getParentRoute: () => AuthedRoute,
 } as any)
 
 // Populate the FileRoutesByPath interface
@@ -101,6 +129,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedLogoutImport
       parentRoute: typeof AuthedImport
     }
+    '/_authed/room/$roomId': {
+      id: '/_authed/room/$roomId'
+      path: '/room/$roomId'
+      fullPath: '/room/$roomId'
+      preLoaderRoute: typeof AuthedRoomRoomIdImport
+      parentRoute: typeof AuthedImport
+    }
     '/_authed/settings/profile': {
       id: '/_authed/settings/profile'
       path: '/profile'
@@ -114,6 +149,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings/security'
       preLoaderRoute: typeof AuthedSettingsSecurityImport
       parentRoute: typeof AuthedSettingsRouteImport
+    }
+    '/_authed/share/$roomId': {
+      id: '/_authed/share/$roomId'
+      path: '/share/$roomId'
+      fullPath: '/share/$roomId'
+      preLoaderRoute: typeof AuthedShareRoomIdImport
+      parentRoute: typeof AuthedImport
+    }
+    '/_authed/room/': {
+      id: '/_authed/room/'
+      path: '/room'
+      fullPath: '/room'
+      preLoaderRoute: typeof AuthedRoomIndexImport
+      parentRoute: typeof AuthedImport
+    }
+    '/_authed/share/': {
+      id: '/_authed/share/'
+      path: '/share'
+      fullPath: '/share'
+      preLoaderRoute: typeof AuthedShareIndexImport
+      parentRoute: typeof AuthedImport
     }
   }
 }
@@ -137,12 +193,20 @@ interface AuthedRouteChildren {
   AuthedSettingsRouteRoute: typeof AuthedSettingsRouteRouteWithChildren
   AuthedDashboardRoute: typeof AuthedDashboardRoute
   AuthedLogoutRoute: typeof AuthedLogoutRoute
+  AuthedRoomRoomIdRoute: typeof AuthedRoomRoomIdRoute
+  AuthedShareRoomIdRoute: typeof AuthedShareRoomIdRoute
+  AuthedRoomIndexRoute: typeof AuthedRoomIndexRoute
+  AuthedShareIndexRoute: typeof AuthedShareIndexRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedSettingsRouteRoute: AuthedSettingsRouteRouteWithChildren,
   AuthedDashboardRoute: AuthedDashboardRoute,
   AuthedLogoutRoute: AuthedLogoutRoute,
+  AuthedRoomRoomIdRoute: AuthedRoomRoomIdRoute,
+  AuthedShareRoomIdRoute: AuthedShareRoomIdRoute,
+  AuthedRoomIndexRoute: AuthedRoomIndexRoute,
+  AuthedShareIndexRoute: AuthedShareIndexRoute,
 }
 
 const AuthedRouteWithChildren =
@@ -154,8 +218,12 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthedSettingsRouteRouteWithChildren
   '/dashboard': typeof AuthedDashboardRoute
   '/logout': typeof AuthedLogoutRoute
+  '/room/$roomId': typeof AuthedRoomRoomIdRoute
   '/settings/profile': typeof AuthedSettingsProfileRoute
   '/settings/security': typeof AuthedSettingsSecurityRoute
+  '/share/$roomId': typeof AuthedShareRoomIdRoute
+  '/room': typeof AuthedRoomIndexRoute
+  '/share': typeof AuthedShareIndexRoute
 }
 
 export interface FileRoutesByTo {
@@ -164,8 +232,12 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthedSettingsRouteRouteWithChildren
   '/dashboard': typeof AuthedDashboardRoute
   '/logout': typeof AuthedLogoutRoute
+  '/room/$roomId': typeof AuthedRoomRoomIdRoute
   '/settings/profile': typeof AuthedSettingsProfileRoute
   '/settings/security': typeof AuthedSettingsSecurityRoute
+  '/share/$roomId': typeof AuthedShareRoomIdRoute
+  '/room': typeof AuthedRoomIndexRoute
+  '/share': typeof AuthedShareIndexRoute
 }
 
 export interface FileRoutesById {
@@ -175,8 +247,12 @@ export interface FileRoutesById {
   '/_authed/settings': typeof AuthedSettingsRouteRouteWithChildren
   '/_authed/dashboard': typeof AuthedDashboardRoute
   '/_authed/logout': typeof AuthedLogoutRoute
+  '/_authed/room/$roomId': typeof AuthedRoomRoomIdRoute
   '/_authed/settings/profile': typeof AuthedSettingsProfileRoute
   '/_authed/settings/security': typeof AuthedSettingsSecurityRoute
+  '/_authed/share/$roomId': typeof AuthedShareRoomIdRoute
+  '/_authed/room/': typeof AuthedRoomIndexRoute
+  '/_authed/share/': typeof AuthedShareIndexRoute
 }
 
 export interface FileRouteTypes {
@@ -187,8 +263,12 @@ export interface FileRouteTypes {
     | '/settings'
     | '/dashboard'
     | '/logout'
+    | '/room/$roomId'
     | '/settings/profile'
     | '/settings/security'
+    | '/share/$roomId'
+    | '/room'
+    | '/share'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -196,8 +276,12 @@ export interface FileRouteTypes {
     | '/settings'
     | '/dashboard'
     | '/logout'
+    | '/room/$roomId'
     | '/settings/profile'
     | '/settings/security'
+    | '/share/$roomId'
+    | '/room'
+    | '/share'
   id:
     | '__root__'
     | '/'
@@ -205,8 +289,12 @@ export interface FileRouteTypes {
     | '/_authed/settings'
     | '/_authed/dashboard'
     | '/_authed/logout'
+    | '/_authed/room/$roomId'
     | '/_authed/settings/profile'
     | '/_authed/settings/security'
+    | '/_authed/share/$roomId'
+    | '/_authed/room/'
+    | '/_authed/share/'
   fileRoutesById: FileRoutesById
 }
 
@@ -242,7 +330,11 @@ export const routeTree = rootRoute
       "children": [
         "/_authed/settings",
         "/_authed/dashboard",
-        "/_authed/logout"
+        "/_authed/logout",
+        "/_authed/room/$roomId",
+        "/_authed/share/$roomId",
+        "/_authed/room/",
+        "/_authed/share/"
       ]
     },
     "/_authed/settings": {
@@ -261,6 +353,10 @@ export const routeTree = rootRoute
       "filePath": "_authed/logout.tsx",
       "parent": "/_authed"
     },
+    "/_authed/room/$roomId": {
+      "filePath": "_authed/room/$roomId.tsx",
+      "parent": "/_authed"
+    },
     "/_authed/settings/profile": {
       "filePath": "_authed/settings/profile.tsx",
       "parent": "/_authed/settings"
@@ -268,6 +364,18 @@ export const routeTree = rootRoute
     "/_authed/settings/security": {
       "filePath": "_authed/settings/security.tsx",
       "parent": "/_authed/settings"
+    },
+    "/_authed/share/$roomId": {
+      "filePath": "_authed/share/$roomId.tsx",
+      "parent": "/_authed"
+    },
+    "/_authed/room/": {
+      "filePath": "_authed/room/index.tsx",
+      "parent": "/_authed"
+    },
+    "/_authed/share/": {
+      "filePath": "_authed/share/index.tsx",
+      "parent": "/_authed"
     }
   }
 }

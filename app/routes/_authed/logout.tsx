@@ -1,5 +1,5 @@
+import { queries } from "@/lib";
 import { signOut } from "@/lib/server/fn";
-import { queries } from "@/queries";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authed/logout")({

@@ -9,6 +9,22 @@ services:
     networks:
       - shadyfile_network
 
+  redis_dev:
+    image: redis:latest
+    env_file:
+      - .env.development
+    ports:
+      - "6381:6379"
+    restart: unless-stopped
+    volumes:
+      - redis_dev_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - shadyfile_network
+
+volumes:
+  redis_dev_data:
+
 networks:
   shadyfile_network:
     name: shadyfile_network

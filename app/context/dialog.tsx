@@ -1,12 +1,12 @@
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import { Dialog } from "@/components/ui/dialog";
-import type { Nullable } from "@/lib";
+import { Nullable } from "@/lib";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
-  type ComponentProps,
+  ComponentProps,
   createContext,
   PropsWithChildren,
-  type ReactNode,
+  ReactNode,
   useContext,
   useState,
 } from "react";

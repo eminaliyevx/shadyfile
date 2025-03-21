@@ -50,7 +50,7 @@ export function BackupCodesDialog() {
     },
   });
 
-  async function handleSubmit(data: z.infer<typeof schema>) {
+  async function handleSubmit() {
     setLoading(true);
 
     try {

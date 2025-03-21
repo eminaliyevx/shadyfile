@@ -1,7 +1,13 @@
 import { DialogInstance } from "@/context";
 import { authClient } from "@/hooks";
 import { z } from "zod";
-import { envSchema, themeSchema } from "../schemas";
+import {
+  envSchema,
+  roomSchema,
+  roomUserSchema,
+  themeSchema,
+  webSocketMessageSchema,
+} from "../schemas";
 
 export type Nullable<T> = T | null;
 
@@ -18,3 +24,9 @@ export type Session = typeof authClient.$Infer.Session;
 export type DialogProps = {
   dialog: DialogInstance;
 };
+
+export type WebSocketMessage = z.infer<typeof webSocketMessageSchema>;
+
+export type RoomUser = z.infer<typeof roomUserSchema>;
+
+export type Room = z.infer<typeof roomSchema>;

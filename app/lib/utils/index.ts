@@ -1,6 +1,6 @@
-import { type ClassValue, clsx } from "clsx";
+import { ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { Nullish } from "../types";
+import { Nullable, Nullish } from "../types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -30,4 +30,24 @@ export function getInitialsFromName(name: string) {
     .split(" ")
     .map((value) => value[0])
     .join("");
+}
+
+export function safeJsonParse<T>(
+  value: unknown,
+  catchValue: Nullable<T> = null,
+): Nullable<T> {
+  try {
+    return JSON.parse(value as string) as T;
+  } catch {
+    return catchValue;
+  }
+}
+
+export function formatFileSize(bytes: number) {
+  if (bytes === 0) return "0 Bytes";
+
+  const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+
+  return parseFloat((bytes / Math.pow(1024, i)).toFixed(1)) + " " + sizes[i];
 }

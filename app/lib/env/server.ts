@@ -1,6 +1,6 @@
-import { NodeEnvEnum } from "@/lib";
 import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
+import { NodeEnvEnum } from "../enums";
 
 export const env = createEnv({
   server: {
@@ -10,6 +10,9 @@ export const env = createEnv({
     POSTGRES_DB: z.string().min(1),
     POSTGRES_PORT: z.coerce.number(),
     DATABASE_URL: z.string().url(),
+    REDIS_HOST: z.string(),
+    REDIS_PORT: z.coerce.number(),
+    REDIS_PASSWORD: z.string(),
     APP_TITLE: z.string().min(1),
     APP_PORT: z.coerce.number(),
     BETTER_AUTH_SECRET: z.string().min(1),

@@ -2,10 +2,9 @@ import { Layout, NavigationProgress } from "@/components";
 import { Toaster } from "@/components/ui/sonner";
 import { DialogProvider } from "@/context";
 import { useTheme } from "@/hooks";
-import { cn, ThemeEnum } from "@/lib";
-import { queries } from "@/queries";
+import { cn, queries, ThemeEnum } from "@/lib";
 import appCss from "@/styles/app.css?url";
-import { type QueryClient } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import {
   createRootRouteWithContext,
   HeadContent,
@@ -16,6 +15,12 @@ import { LoadingBarContainer } from "react-top-loading-bar";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   {
+    beforeLoad: async ({ context }) => {
+      await Promise.all([
+        context.queryClient.ensureQueryData(queries.theme()),
+        context.queryClient.ensureQueryData(queries.session()),
+      ]);
+    },
     head: () => ({
       meta: [
         {
@@ -65,12 +70,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       ],
     }),
     component: RootComponent,
-    beforeLoad: async ({ context }) => {
-      await Promise.all([
-        context.queryClient.ensureQueryData(queries.theme()),
-        context.queryClient.ensureQueryData(queries.session()),
-      ]);
-    },
   },
 );
 

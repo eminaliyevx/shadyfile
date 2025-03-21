@@ -1,8 +1,10 @@
-import { ThemeEnum, themeSchema, type Theme } from "@/lib";
+import { Room, ThemeEnum, themeSchema, Theme } from "@/lib";
 import { createServerFn } from "@tanstack/react-start";
 import { getCookie, setCookie } from "@tanstack/react-start/server";
+import { randomUUID } from "crypto";
 import { auth } from "../auth";
 import { assertRequestMiddleware, authMiddleware } from "../middleware";
+import { redis } from "../redis";
 
 export const getTheme = createServerFn({ method: "GET" }).handler(() => {
   const theme = themeSchema.parse(getCookie("theme"));
@@ -42,4 +44,22 @@ export const getBackupCodes = createServerFn()
     return auth.api.viewBackupCodes({
       body: { userId: context.session.user.id },
     });
+  });
+
+export const createRoom = createServerFn()
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    const id = randomUUID();
+
+    const room: Room = {
+      host: {
+        id: context.session.user.id,
+        username: context.session.user.username as string,
+      },
+      users: {},
+    };
+
+    await redis.set(`room:${id}`, JSON.stringify(room));
+
+    return id;
   });

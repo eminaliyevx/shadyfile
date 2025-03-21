@@ -1,6 +1,5 @@
-import { ThemeEnum, type Theme } from "@/lib";
+import { queries, ThemeEnum, Theme } from "@/lib";
 import { setTheme } from "@/lib/server/fn";
-import { queries } from "@/queries";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";

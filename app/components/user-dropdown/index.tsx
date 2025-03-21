@@ -1,9 +1,10 @@
 import { useDialog } from "@/context";
 import { LogoutAlertDialog } from "@/features/auth";
+import { CreateRoomDialog } from "@/features/room";
 import { useSession } from "@/hooks";
 import { getInitialsFromName, selfOrUndefined } from "@/lib/utils";
 import { Link } from "@tanstack/react-router";
-import { LogOut, Settings } from "lucide-react";
+import { LogOut, Settings, Share2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import {
   DropdownMenu,
@@ -26,6 +27,13 @@ export function UserDropdown() {
     open({
       isAlert: true,
       content: () => <LogoutAlertDialog />,
+    });
+  }
+
+  function openCreateRoomDialog() {
+    open({
+      isAlert: true,
+      content: (dialog) => <CreateRoomDialog dialog={dialog} />,
     });
   }
 
@@ -69,6 +77,14 @@ export function UserDropdown() {
         <DropdownMenuSeparator />
 
         <DropdownMenuGroup>
+          <DropdownMenuItem
+            className="cursor-pointer"
+            onClick={openCreateRoomDialog}
+          >
+            <Share2 />
+            Create room
+          </DropdownMenuItem>
+
           <DropdownMenuItem className="cursor-pointer" asChild>
             <Link to="/settings">
               <Settings />

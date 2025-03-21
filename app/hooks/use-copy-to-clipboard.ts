@@ -15,7 +15,7 @@ export function useCopyToClipboard() {
       setCopiedText(text);
 
       return true;
-    } catch (error) {
+    } catch {
       setCopiedText(null);
 
       return false;

@@ -1,5 +1,6 @@
 import pluginJs from "@eslint/js";
 import pluginQuery from "@tanstack/eslint-plugin-query";
+import pluginRouter from "@tanstack/eslint-plugin-router";
 import pluginReact from "eslint-plugin-react";
 import pluginReactHooks from "eslint-plugin-react-hooks";
 import globals from "globals";
@@ -18,5 +19,16 @@ export default [
     settings: { react: { version: "detect" } },
   },
   pluginReactHooks.configs["recommended-latest"],
+  ...pluginRouter.configs["flat/recommended"],
   ...pluginQuery.configs["flat/recommended"],
+  {
+    rules: {
+      "@typescript-eslint/consistent-type-imports": [
+        "error",
+        {
+          prefer: "no-type-imports",
+        },
+      ],
+    },
+  },
 ];

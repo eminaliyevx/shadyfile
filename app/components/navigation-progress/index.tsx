@@ -15,13 +15,13 @@ export function NavigationProgress() {
       start();
     });
 
-    const unsubOnRendered = router.subscribe("onRendered", () => {
+    const unsubOnLoad = router.subscribe("onLoad", () => {
       complete();
     });
 
     return () => {
       unsubOnBeforeNavigate();
-      unsubOnRendered();
+      unsubOnLoad();
     };
   });
 
