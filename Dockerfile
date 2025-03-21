@@ -6,17 +6,15 @@ ARG VITE_APP_DOMAIN
 ENV VITE_APP_TITLE=$VITE_APP_TITLE
 ENV VITE_APP_DOMAIN=$VITE_APP_DOMAIN
 
-RUN npm install -g pnpm
-
 WORKDIR /app
 
 COPY package*.json ./
 
-RUN pnpm install
+RUN npm install
 
 COPY . .
 
-RUN pnpm build
+RUN npm run build
 
 FROM node:latest
 
@@ -29,4 +27,4 @@ COPY --from=builder /app/node_modules ./node_modules
 
 EXPOSE 3000
 
-CMD ["pnpm", "start"] 
+CMD ["npm", "run", "start"] 
