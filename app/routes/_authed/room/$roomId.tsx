@@ -42,6 +42,7 @@ import {
   WebSocketMessageErrorEnum,
   webSocketMessageSchema,
 } from "@/lib";
+import { getIceServers } from "@/lib/server/fn";
 import { createFileRoute } from "@tanstack/react-router";
 import { CloudUpload, Copy, Paperclip, QrCode } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
@@ -96,11 +97,20 @@ const WEBSOCKET_URL =
 
 export const Route = createFileRoute("/_authed/room/$roomId")({
   component: RoomComponent,
+  loader: async () => {
+    const iceServers = await getIceServers();
+
+    return {
+      iceServers,
+    };
+  },
   ssr: false,
 });
 
 function RoomComponent() {
   const { roomId } = Route.useParams();
+
+  const { iceServers } = Route.useLoaderData();
 
   const { session } = useSession();
 
@@ -380,6 +390,7 @@ function RoomComponent() {
           initiator: false,
           trickle: false,
           objectMode: true,
+          config: { iceServers: iceServers as RTCIceServer[] },
         });
 
         webRTCPeer.current = rtcPeer;
@@ -435,7 +446,7 @@ function RoomComponent() {
         webRTCPeer.current.signal(message.data.signal);
       }
     },
-    [you, roomId, handleDataChannelMessage],
+    [you, roomId, iceServers, handleDataChannelMessage],
   );
 
   const handleMessage = useCallback(
@@ -542,6 +553,7 @@ function RoomComponent() {
       initiator: true,
       trickle: false,
       objectMode: true,
+      config: { iceServers: iceServers as RTCIceServer[] },
     });
 
     webRTCPeer.current = rtcPeer;
@@ -589,7 +601,14 @@ function RoomComponent() {
         description: error.message,
       });
     });
-  }, [peer, you, roomId, sendJsonMessage, handleDataChannelMessage]);
+  }, [
+    peer,
+    you,
+    roomId,
+    iceServers,
+    sendJsonMessage,
+    handleDataChannelMessage,
+  ]);
 
   const sendFiles = useCallback(async () => {
     if (!connected || !webRTCPeer.current || !selectedFiles) {
@@ -712,12 +731,12 @@ function RoomComponent() {
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <CardTitle className="text-2xl">
-                Private File Sharing Room
-              </CardTitle>
+              <CardTitle className="text-2xl">P2P File Sharing Room</CardTitle>
 
               <CardDescription className="text-base">
-                Share files securely between two users
+                You can share files with the person you connect to directly
+                without any third party involvement. Your room will expire in 24
+                hours.
               </CardDescription>
             </div>
 
@@ -798,175 +817,188 @@ function RoomComponent() {
                 )}
               </div>
 
-              <FileUploader
-                value={selectedFiles}
-                onValueChange={setSelectedFiles}
-                dropzoneOptions={{
-                  multiple: true,
-                }}
-                className="mt-8 mb-4 rounded-lg"
-              >
-                <FileInput className="border-2 border-dashed border-border">
-                  <div className="grid place-items-center p-8">
-                    <CloudUpload className="size-12 text-muted-foreground" />
+              {connected && (
+                <>
+                  <FileUploader
+                    value={selectedFiles}
+                    onValueChange={setSelectedFiles}
+                    dropzoneOptions={{
+                      multiple: true,
+                      maxFiles: Infinity,
+                    }}
+                    className="mt-8 mb-4 rounded-lg"
+                  >
+                    <FileInput className="border-2 border-dashed border-border">
+                      <div className="grid place-items-center p-8">
+                        <CloudUpload className="size-12 text-muted-foreground" />
 
-                    <span className="text-center text-sm text-muted-foreground">
-                      <strong>Click to upload</strong> or drag and drop
-                    </span>
-                  </div>
-                </FileInput>
+                        <span className="text-center text-sm text-muted-foreground">
+                          <strong>Click to upload</strong> or drag and drop
+                        </span>
+                      </div>
+                    </FileInput>
 
-                <FileUploaderContent>
-                  {selectedFiles?.map((file, index) => (
-                    <FileUploaderItem key={index} index={index}>
-                      <Paperclip className="size-4" />
+                    <FileUploaderContent>
+                      {selectedFiles?.map((file, index) => (
+                        <FileUploaderItem key={index} index={index}>
+                          <Paperclip className="size-4" />
 
-                      <span>{file.name}</span>
-                    </FileUploaderItem>
-                  ))}
-                </FileUploaderContent>
-              </FileUploader>
+                          <span>{file.name}</span>
+                        </FileUploaderItem>
+                      ))}
+                    </FileUploaderContent>
+                  </FileUploader>
 
-              <Button
-                className="w-full"
-                disabled={!selectedFiles?.length}
-                onClick={sendFiles}
-              >
-                Send Files
-              </Button>
+                  <Button
+                    className="w-full"
+                    disabled={!selectedFiles?.length}
+                    onClick={sendFiles}
+                  >
+                    Send Files
+                  </Button>
 
-              <Tabs defaultValue="send" className="w-full">
-                <TabsList className="mt-4 grid w-full grid-cols-2">
-                  <TabsTrigger value="send">Send</TabsTrigger>
-                  <TabsTrigger value="receive">Receive</TabsTrigger>
-                </TabsList>
+                  <Tabs defaultValue="send" className="w-full">
+                    <TabsList className="mt-4 grid w-full grid-cols-2">
+                      <TabsTrigger value="send">Send</TabsTrigger>
+                      <TabsTrigger value="receive">Receive</TabsTrigger>
+                    </TabsList>
 
-                <TabsContent value="send">
-                  {sendingFiles.length > 0 ? (
-                    <div className="mt-4">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>File</TableHead>
-                            <TableHead>Size</TableHead>
-                            <TableHead>Status</TableHead>
-                          </TableRow>
-                        </TableHeader>
+                    <TabsContent value="send">
+                      {sendingFiles.length > 0 ? (
+                        <div className="mt-4">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>File</TableHead>
+                                <TableHead>Size</TableHead>
+                                <TableHead>Status</TableHead>
+                              </TableRow>
+                            </TableHeader>
 
-                        <TableBody>
-                          {sendingFiles.map((file) => (
-                            <TableRow key={file.id}>
-                              <TableCell className="flex items-center gap-2">
-                                <Paperclip className="size-4 text-muted-foreground" />
+                            <TableBody>
+                              {sendingFiles.map((file) => (
+                                <TableRow key={file.id}>
+                                  <TableCell className="flex items-center gap-2">
+                                    <Paperclip className="size-4 text-muted-foreground" />
 
-                                <span className="truncate">{file.name}</span>
-                              </TableCell>
+                                    <span className="truncate">
+                                      {file.name}
+                                    </span>
+                                  </TableCell>
 
-                              <TableCell>{formatFileSize(file.size)}</TableCell>
+                                  <TableCell>
+                                    {formatFileSize(file.size)}
+                                  </TableCell>
 
-                              <TableCell>
-                                {file.status === "pending" && (
-                                  <Badge variant="outline">Pending</Badge>
-                                )}
+                                  <TableCell>
+                                    {file.status === "pending" && (
+                                      <Badge variant="outline">Pending</Badge>
+                                    )}
 
-                                {file.status === "transferring" && (
-                                  <Badge
-                                    variant="secondary"
-                                    className="flex items-center gap-1"
-                                  >
-                                    <span className="h-2 w-2 animate-pulse rounded-full bg-blue-500 leading-none"></span>
-                                    {file.progress}%
-                                  </Badge>
-                                )}
+                                    {file.status === "transferring" && (
+                                      <Badge
+                                        variant="secondary"
+                                        className="flex items-center gap-1"
+                                      >
+                                        <span className="h-2 w-2 animate-pulse rounded-full bg-blue-500 leading-none"></span>
+                                        {file.progress}%
+                                      </Badge>
+                                    )}
 
-                                {file.status === "completed" && (
-                                  <Badge className="border-transparent bg-green-500 text-white hover:bg-green-500">
-                                    Completed
-                                  </Badge>
-                                )}
+                                    {file.status === "completed" && (
+                                      <Badge className="border-transparent bg-green-500 text-white hover:bg-green-500">
+                                        Completed
+                                      </Badge>
+                                    )}
 
-                                {file.status === "error" && (
-                                  <Badge variant="destructive">Error</Badge>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  ) : (
-                    <div className="mt-4 grid place-items-center rounded-lg border-2 border-dashed px-4 py-12 text-center">
-                      <Paperclip className="mb-2 h-8 w-8 text-muted-foreground" />
-                      <p className="text-muted-foreground">
-                        No files have been sent yet
-                      </p>
-                    </div>
-                  )}
-                </TabsContent>
+                                    {file.status === "error" && (
+                                      <Badge variant="destructive">Error</Badge>
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      ) : (
+                        <div className="mt-4 grid place-items-center rounded-lg border-2 border-dashed px-4 py-12 text-center">
+                          <Paperclip className="mb-2 h-8 w-8 text-muted-foreground" />
+                          <p className="text-muted-foreground">
+                            No files have been sent yet
+                          </p>
+                        </div>
+                      )}
+                    </TabsContent>
 
-                <TabsContent value="receive">
-                  {receivingFiles.length > 0 ? (
-                    <div className="mt-4">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>File</TableHead>
-                            <TableHead>Size</TableHead>
-                            <TableHead>Status</TableHead>
-                          </TableRow>
-                        </TableHeader>
+                    <TabsContent value="receive">
+                      {receivingFiles.length > 0 ? (
+                        <div className="mt-4">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>File</TableHead>
+                                <TableHead>Size</TableHead>
+                                <TableHead>Status</TableHead>
+                              </TableRow>
+                            </TableHeader>
 
-                        <TableBody>
-                          {receivingFiles.map((file) => (
-                            <TableRow key={file.id}>
-                              <TableCell className="flex items-center gap-2">
-                                <Paperclip className="size-4 text-muted-foreground" />
+                            <TableBody>
+                              {receivingFiles.map((file) => (
+                                <TableRow key={file.id}>
+                                  <TableCell className="flex items-center gap-2">
+                                    <Paperclip className="size-4 text-muted-foreground" />
 
-                                <span className="truncate">{file.name}</span>
-                              </TableCell>
+                                    <span className="truncate">
+                                      {file.name}
+                                    </span>
+                                  </TableCell>
 
-                              <TableCell>{formatFileSize(file.size)}</TableCell>
+                                  <TableCell>
+                                    {formatFileSize(file.size)}
+                                  </TableCell>
 
-                              <TableCell>
-                                {file.status === "pending" && (
-                                  <Badge variant="outline">Pending</Badge>
-                                )}
+                                  <TableCell>
+                                    {file.status === "pending" && (
+                                      <Badge variant="outline">Pending</Badge>
+                                    )}
 
-                                {file.status === "transferring" && (
-                                  <Badge
-                                    variant="secondary"
-                                    className="flex items-center gap-1"
-                                  >
-                                    <span className="h-2 w-2 animate-pulse rounded-full bg-blue-500 leading-none"></span>
-                                    {file.progress}%
-                                  </Badge>
-                                )}
+                                    {file.status === "transferring" && (
+                                      <Badge
+                                        variant="secondary"
+                                        className="flex items-center gap-1"
+                                      >
+                                        <span className="h-2 w-2 animate-pulse rounded-full bg-blue-500 leading-none"></span>
+                                        {file.progress}%
+                                      </Badge>
+                                    )}
 
-                                {file.status === "completed" && (
-                                  <Badge className="border-transparent bg-green-500 text-white hover:bg-green-500">
-                                    Completed
-                                  </Badge>
-                                )}
+                                    {file.status === "completed" && (
+                                      <Badge className="border-transparent bg-green-500 text-white hover:bg-green-500">
+                                        Completed
+                                      </Badge>
+                                    )}
 
-                                {file.status === "error" && (
-                                  <Badge variant="destructive">Error</Badge>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  ) : (
-                    <div className="mt-4 grid place-items-center rounded-lg border-2 border-dashed px-4 py-12 text-center">
-                      <Paperclip className="mb-2 h-8 w-8 text-muted-foreground" />
-                      <p className="text-muted-foreground">
-                        No files have been received yet
-                      </p>
-                    </div>
-                  )}
-                </TabsContent>
-              </Tabs>
+                                    {file.status === "error" && (
+                                      <Badge variant="destructive">Error</Badge>
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      ) : (
+                        <div className="mt-4 grid place-items-center rounded-lg border-2 border-dashed px-4 py-12 text-center">
+                          <Paperclip className="mb-2 h-8 w-8 text-muted-foreground" />
+                          <p className="text-muted-foreground">
+                            No files have been received yet
+                          </p>
+                        </div>
+                      )}
+                    </TabsContent>
+                  </Tabs>
+                </>
+              )}
             </>
           )}
         </CardContent>

@@ -1,7 +1,9 @@
-import { Room, ThemeEnum, themeSchema, Theme } from "@/lib";
+import { Room, Theme, ThemeEnum, themeSchema } from "@/lib";
+import { env } from "@/lib/env/server";
 import { createServerFn } from "@tanstack/react-start";
 import { getCookie, setCookie } from "@tanstack/react-start/server";
 import { randomUUID } from "crypto";
+import twilio from "twilio";
 import { auth } from "../auth";
 import { assertRequestMiddleware, authMiddleware } from "../middleware";
 import { redis } from "../redis";
@@ -62,4 +64,14 @@ export const createRoom = createServerFn()
     await redis.set(`room:${id}`, JSON.stringify(room));
 
     return id;
+  });
+
+export const getIceServers = createServerFn()
+  .middleware([authMiddleware])
+  .handler(async () => {
+    const client = twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN);
+
+    const { iceServers } = await client.tokens.create({ ttl: 86400 });
+
+    return iceServers;
   });

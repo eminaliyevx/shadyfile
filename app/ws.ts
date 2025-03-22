@@ -31,6 +31,8 @@ interface TypedPeer extends Peer {
   ): void;
 }
 
+const ROOM_EXPIRY_TIME = 60 * 60 * 24;
+
 export default defineEventHandler({
   handler(event) {
     consola.info("WebSocket event handler:", event);
@@ -97,6 +99,8 @@ export default defineEventHandler({
             host: newHost,
             users: updatedUsers,
           }),
+          "EX",
+          ROOM_EXPIRY_TIME,
         );
       }
 
@@ -185,6 +189,8 @@ function webSocketMessageHandler(peer: TypedPeer) {
               },
             },
           }),
+          "EX",
+          ROOM_EXPIRY_TIME,
         );
 
         peer.subscribe(`room:${message.data.roomId}`);
