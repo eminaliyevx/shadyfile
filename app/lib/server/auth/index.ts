@@ -1,7 +1,7 @@
-import { env } from "@/lib/env/server";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { twoFactor, username } from "better-auth/plugins";
+import { env } from "../../env/server";
 import { db } from "../db";
 import {
   account,

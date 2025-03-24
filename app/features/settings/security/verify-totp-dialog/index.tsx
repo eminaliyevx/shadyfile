@@ -26,7 +26,6 @@ import { useSession } from "@/hooks";
 import { useAuth } from "@/hooks/use-auth";
 import { DialogProps, getErrorMessage } from "@/lib";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "@tanstack/react-router";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
 import { QRCodeSVG } from "qrcode.react";
 import { useState } from "react";
@@ -46,8 +45,6 @@ const schema = z.object({
 });
 
 export function VerifyTotpDialog({ dialog, totpUri }: VerifyTotpDialogProps) {
-  const router = useRouter();
-
   const { authClient } = useAuth();
 
   const { refetchSession } = useSession();
@@ -79,8 +76,6 @@ export function VerifyTotpDialog({ dialog, totpUri }: VerifyTotpDialogProps) {
             refetchSession();
           } else {
             await refetchSession();
-
-            await router.navigate({ to: "/dashboard" });
           }
         },
         onError: ({ error }) => {

@@ -51,3 +51,74 @@ export function formatFileSize(bytes: number) {
 
   return parseFloat((bytes / Math.pow(1024, i)).toFixed(1)) + " " + sizes[i];
 }
+
+export function generateFileAlias() {
+  return crypto.randomUUID();
+}
+
+export function generateMasterKey() {
+  return crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, true, [
+    "encrypt",
+    "decrypt",
+  ]);
+}
+
+export function generateRandomKey(length: number) {
+  return crypto.getRandomValues(new Uint8Array(length));
+}
+
+export function encryptData(data: ArrayBuffer, key: CryptoKey, iv: Uint8Array) {
+  return crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, data);
+}
+
+export function decryptData(data: ArrayBuffer, key: CryptoKey, iv: Uint8Array) {
+  return crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, data);
+}
+
+export async function exportKey(key: CryptoKey) {
+  const rawKey = await crypto.subtle.exportKey("raw", key);
+
+  return uint8ArrayToBase64(new Uint8Array(rawKey));
+}
+
+export function importKey(key: string) {
+  const data = base64ToUint8Array(key);
+
+  return crypto.subtle.importKey("raw", data, { name: "AES-GCM" }, true, [
+    "encrypt",
+    "decrypt",
+  ]);
+}
+
+export function uint8ArrayToBase64(data: Uint8Array) {
+  return btoa(String.fromCharCode(...data));
+}
+
+export function base64ToUint8Array(data: string) {
+  const binary = atob(data);
+
+  const array = new Uint8Array(binary.length);
+
+  for (let i = 0; i < binary.length; i++) {
+    array[i] = binary.charCodeAt(i);
+  }
+
+  return array;
+}
+
+export function deriveIvForChunk(
+  baseIv: Uint8Array,
+  chunkIndex: number,
+): Uint8Array {
+  const derivedIv = new Uint8Array(baseIv);
+
+  const bytes = new Uint8Array(4);
+
+  new DataView(bytes.buffer).setUint32(0, chunkIndex);
+
+  for (let i = 0; i < 4; i++) {
+    derivedIv[derivedIv.length - 4 + i] ^= bytes[i];
+  }
+
+  return derivedIv;
+}

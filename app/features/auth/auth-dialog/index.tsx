@@ -24,7 +24,6 @@ import { DialogProps } from "@/lib";
 import { env } from "@/lib/env/client";
 import { getErrorMessage } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -54,8 +53,6 @@ const signupSchema = z.object({
 });
 
 export function AuthDialog({ dialog }: DialogProps) {
-  const router = useRouter();
-
   const { authClient } = useAuth();
 
   const { refetchSession } = useSession();
@@ -96,8 +93,6 @@ export function AuthDialog({ dialog }: DialogProps) {
           });
         } else {
           await refetchSession();
-
-          await router.navigate({ to: "/dashboard" });
         }
       },
       onError: ({ error }) => {
@@ -123,8 +118,6 @@ export function AuthDialog({ dialog }: DialogProps) {
         },
         onSuccess: async () => {
           await refetchSession();
-
-          await router.navigate({ to: "/dashboard" });
         },
         onError: ({ error }) => {
           toast.error(error.message);

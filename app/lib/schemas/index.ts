@@ -83,3 +83,22 @@ export const roomSchema = z.object({
   host: roomUserSchema.optional(),
   users: z.record(z.string().min(1), roomUserSchema),
 });
+
+export const fileChunkSchema = z.object({
+  fileId: z.string().uuid(),
+  chunkIndex: z.coerce.number(),
+  totalChunks: z.coerce.number(),
+  meta: z.string().nullish(),
+});
+
+export const fileRedisSchema = z.object({
+  meta: z.string().min(1),
+  totalChunks: z.coerce.number(),
+});
+
+export const fileMetaSchema = z.object({
+  fileName: z.string().min(1),
+  fileSize: z.coerce.number(),
+  fileType: z.string().nullish(),
+  totalChunks: z.coerce.number(),
+});

@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { env } from "@/lib/env/client";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Lock, Share2, Shield } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -46,18 +46,22 @@ function Index() {
           {/* Feature cards */}
           <div className="mx-auto mt-16 max-w-5xl sm:mt-20">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
-              <Card className="h-full">
-                <CardContent className="flex h-full flex-col items-center p-6 text-center">
-                  <div className="rounded-full bg-primary/10 p-3">
-                    <Lock className="h-6 w-6 text-primary" />
-                  </div>
-                  <h3 className="mt-4 font-semibold">End-to-End Encryption</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Your files are encrypted before leaving your device,
-                    ensuring maximum privacy
-                  </p>
-                </CardContent>
-              </Card>
+              <Link to="/share" className="cursor-pointer">
+                <Card className="h-full transition-transform hover:scale-105 hover:shadow-md">
+                  <CardContent className="flex h-full flex-col items-center p-6 text-center">
+                    <div className="rounded-full bg-primary/10 p-3">
+                      <Lock className="h-6 w-6 text-primary" />
+                    </div>
+                    <h3 className="mt-4 font-semibold">
+                      End-to-End Encryption
+                    </h3>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Your files are encrypted before leaving your device,
+                      ensuring maximum privacy
+                    </p>
+                  </CardContent>
+                </Card>
+              </Link>
 
               <Card className="h-full">
                 <CardContent className="flex h-full flex-col items-center p-6 text-center">

@@ -38,6 +38,17 @@ export default defineEventHandler({
     consola.info("WebSocket event handler:", event);
   },
   websocket: defineWebSocket({
+    // async upgrade(request) {
+    //   const session = await auth.api.getSession({
+    //     headers: request.headers,
+    //   });
+
+    //   if (!session) {
+    //     return new Response("Unauthorized", { status: 401 });
+    //   }
+
+    //   request.context.user = session;
+    // },
     open(peer: TypedPeer) {
       consola.info(`WebSocket connection opened: peer ${peer.id}`);
 
