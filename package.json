@@ -58,6 +58,7 @@
     "tailwindcss": "^4.0.15",
     "tailwindcss-animate": "^1.0.7",
     "twilio": "^5.5.1",
+    "use-scramble": "^2.2.15",
     "vaul": "^1.1.2",
     "vinxi": "^0.5.3",
     "zod": "^3.24.2"

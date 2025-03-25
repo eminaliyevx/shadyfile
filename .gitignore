@@ -4,3 +4,4 @@ drizzle/
 .vinxi/
 .env*
 !.env.example
+uploads/

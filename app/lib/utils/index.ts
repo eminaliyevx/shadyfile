@@ -105,20 +105,3 @@ export function base64ToUint8Array(data: string) {
 
   return array;
 }
-
-export function deriveIvForChunk(
-  baseIv: Uint8Array,
-  chunkIndex: number,
-): Uint8Array {
-  const derivedIv = new Uint8Array(baseIv);
-
-  const bytes = new Uint8Array(4);
-
-  new DataView(bytes.buffer).setUint32(0, chunkIndex);
-
-  for (let i = 0; i < 4; i++) {
-    derivedIv[derivedIv.length - 4 + i] ^= bytes[i];
-  }
-
-  return derivedIv;
-}

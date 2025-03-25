@@ -22,7 +22,6 @@ import { Progress } from "@/components/ui/progress";
 import { useDialog } from "@/context";
 import { useCopyToClipboard } from "@/hooks";
 import {
-  deriveIvForChunk,
   encryptData,
   exportKey,
   generateMasterKey,
@@ -200,7 +199,7 @@ function ShareComponent() {
           }),
         ),
         masterKey,
-        deriveIvForChunk(iv, chunkIndex),
+        iv,
       );
 
       data.set("meta", uint8ArrayToBase64(new Uint8Array(encryptedMeta)));
@@ -210,7 +209,7 @@ function ShareComponent() {
     const end = Math.min(start + CHUNK_SIZE, file.size);
     const chunk = file.slice(start, end);
 
-    const chunkIv = deriveIvForChunk(iv, chunkIndex);
+    const chunkIv = generateRandomKey(16);
 
     const encryptedChunk = await encryptData(
       await chunk.arrayBuffer(),
@@ -218,7 +217,7 @@ function ShareComponent() {
       chunkIv,
     );
 
-    data.set("chunkData", new Blob([encryptedChunk]));
+    data.set("chunkData", new Blob([chunkIv, encryptedChunk]));
 
     const { success } = await uploadFileChunkFn({ data });
 

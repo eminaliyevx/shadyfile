@@ -13,12 +13,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
 import { useDialog } from "@/context";
 import { useCopyToClipboard } from "@/hooks";
 import {
   base64ToUint8Array,
   decryptData,
-  deriveIvForChunk,
   fileMetaSchema,
   formatFileSize,
   importKey,
@@ -33,7 +33,20 @@ import { QRCodeSVG } from "qrcode.react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import streamsaver from "streamsaver";
+import { useScramble, UseScrambleProps } from "use-scramble";
 import { z } from "zod";
+
+const SCRAMBLE_OPTIONS: UseScrambleProps = {
+  range: [65, 125],
+  speed: 1,
+  tick: 1,
+  step: 5,
+  scramble: 5,
+  seed: 2,
+  chance: 1,
+  overdrive: false,
+  overflow: true,
+};
 
 export const Route = createFileRoute("/_authed/share/$fileId")({
   component: ShareComponent,
@@ -67,6 +80,9 @@ function ShareComponent() {
   const { copy } = useCopyToClipboard();
 
   const { open } = useDialog();
+
+  const [progress, setProgress] = useState(0);
+  const [downloading, setDownloading] = useState(false);
 
   const { iv, key } = useMemo(() => {
     const [iv, key] = hash.split(":");
@@ -105,6 +121,21 @@ function ShareComponent() {
     metaFn();
   }, [metaFn]);
 
+  const { ref: fileNameRef } = useScramble({
+    text: meta?.fileName,
+    ...SCRAMBLE_OPTIONS,
+  });
+
+  const { ref: fileSizeRef } = useScramble({
+    text: formatFileSize(meta?.fileSize ?? 0),
+    ...SCRAMBLE_OPTIONS,
+  });
+
+  const { ref: fileTypeRef } = useScramble({
+    text: meta?.fileType ?? "",
+    ...SCRAMBLE_OPTIONS,
+  });
+
   function handleCopy() {
     copy(location.href)
       .then(() => {
@@ -141,6 +172,8 @@ function ShareComponent() {
     }
 
     try {
+      setDownloading(true);
+
       const fileStream = streamsaver.createWriteStream(
         meta?.fileName as string,
         {
@@ -150,6 +183,8 @@ function ShareComponent() {
 
       const writer = fileStream.getWriter();
 
+      let transferredBytes = 0;
+
       const decryptionStream = new ReadableStream({
         async start(controller) {
           for (let i = 0; i < meta.totalChunks; i++) {
@@ -157,15 +192,44 @@ function ShareComponent() {
               data: { fileId, fileSize: meta.fileSize, chunkIndex: i },
             });
 
-            const encryptedChunk = await chunk.arrayBuffer();
+            const response = new Response(
+              new ReadableStream({
+                async start(controller) {
+                  const reader = chunk.body!.getReader();
+
+                  for (;;) {
+                    const { done, value } = await reader.read();
+
+                    if (done) {
+                      break;
+                    }
+
+                    transferredBytes += value.byteLength;
+
+                    const progress = Math.round(
+                      (transferredBytes / meta.fileSize) * 100,
+                    );
+
+                    setProgress(progress);
+
+                    controller.enqueue(value);
+                  }
+                  controller.close();
+                },
+              }),
+            );
+
+            const chunkArrayBuffer = await response.arrayBuffer();
+
+            const chunkIv = chunkArrayBuffer.slice(0, 16);
+            const encryptedChunk = chunkArrayBuffer.slice(16);
 
             const masterKey = await importKey(key);
-            const chunkIv = deriveIvForChunk(iv, i);
 
             const decryptedChunk = await decryptData(
               new Uint8Array(encryptedChunk),
               masterKey,
-              chunkIv,
+              new Uint8Array(chunkIv),
             );
 
             controller.enqueue(new Uint8Array(decryptedChunk));
@@ -178,13 +242,20 @@ function ShareComponent() {
       const reader = decryptionStream.getReader();
 
       function pump() {
-        reader.read().then(async (result) => {
-          if (result.done) {
-            writer.close();
-          } else {
-            writer.write(result.value).then(pump);
-          }
-        });
+        reader
+          .read()
+          .then(async (result) => {
+            if (result.done) {
+              setDownloading(false);
+
+              writer.close();
+            } else {
+              writer.write(result.value).then(pump);
+            }
+          })
+          .catch(() => {
+            setDownloading(false);
+          });
       }
 
       pump();
@@ -222,27 +293,33 @@ function ShareComponent() {
         </CardHeader>
 
         <CardContent>
-          <div className="flex items-center gap-4 rounded-lg border-2 border-dashed border-border p-8">
-            <FileKey className="size-10" />
+          <div className="flex flex-col gap-4 rounded-lg border-2 border-dashed border-border p-8 sm:flex-row sm:items-center">
+            <FileKey className="size-10 shrink-0" />
 
             <div className="flex flex-col gap-1">
-              <span className="text-lg text-muted-foreground">
-                <strong>Name:</strong> {meta?.fileName}
+              <span className="text-lg break-all text-muted-foreground">
+                <strong>Name:</strong> <span ref={fileNameRef}></span>
               </span>
 
               <span className="text-lg text-muted-foreground">
-                <strong>Size:</strong> {formatFileSize(meta?.fileSize ?? 0)}
+                <strong>Size:</strong> <span ref={fileSizeRef}></span>
               </span>
 
               <span className="text-lg text-muted-foreground">
-                <strong>Type:</strong> {meta?.fileType}
+                <strong>Type:</strong> <span ref={fileTypeRef}></span>
               </span>
             </div>
           </div>
 
-          <Button className="mt-4 w-full" onClick={download}>
+          <Button
+            className="mt-4 w-full"
+            loading={downloading}
+            onClick={download}
+          >
             Download
           </Button>
+
+          {downloading && <Progress value={progress} className="mt-4" />}
         </CardContent>
       </Card>
     </div>
