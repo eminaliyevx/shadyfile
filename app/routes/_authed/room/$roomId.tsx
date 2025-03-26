@@ -657,20 +657,7 @@ function RoomComponent() {
 
         let chunkIndex = 0;
 
-        let fillBuffer = false;
-
-        webRTCPeer.current._channel.onbufferedamountlow = () => {
-          fillBuffer = true;
-        };
-
         while (chunkIndex < totalChunks) {
-          if (
-            !fillBuffer &&
-            webRTCPeer.current!._channel.bufferedAmount > CHUNK_SIZE
-          ) {
-            continue;
-          }
-
           const start = chunkIndex * CHUNK_SIZE;
           const end = Math.min(start + CHUNK_SIZE, file.size);
 
