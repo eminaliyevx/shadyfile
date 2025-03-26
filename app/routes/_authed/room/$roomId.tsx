@@ -88,7 +88,7 @@ type FileMessage = {
   error?: string;
 };
 
-const CHUNK_SIZE = 64 * 1024;
+const CHUNK_SIZE = 16 * 1024;
 
 const WEBSOCKET_URL =
   typeof window !== "undefined"
@@ -655,7 +655,22 @@ function RoomComponent() {
 
         let transferredBytes = 0;
 
-        for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+        let chunkIndex = 0;
+
+        let fillBuffer = false;
+
+        webRTCPeer.current._channel.onbufferedamountlow = () => {
+          fillBuffer = true;
+        };
+
+        while (chunkIndex < totalChunks) {
+          if (
+            !fillBuffer &&
+            webRTCPeer.current!._channel.bufferedAmount > CHUNK_SIZE
+          ) {
+            continue;
+          }
+
           const start = chunkIndex * CHUNK_SIZE;
           const end = Math.min(start + CHUNK_SIZE, file.size);
 
@@ -673,6 +688,8 @@ function RoomComponent() {
           webRTCPeer.current?.send(new Uint8Array(chunk));
 
           transferredBytes += chunk.byteLength;
+
+          chunkIndex++;
 
           const progress = Math.round((transferredBytes / file.size) * 100);
 
