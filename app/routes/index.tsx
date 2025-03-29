@@ -97,7 +97,7 @@ function Index() {
                     <div className="rounded-full bg-primary/10 p-3">
                       <Share2 className="h-6 w-6 text-primary" />
                     </div>
-                    <h3 className="mt-4 font-semibold">P2P File Transfer</h3>
+                    <h3 className="mt-4 font-semibold">Peer-to-Peer File Transfer</h3>
                     <p className="mt-2 text-sm text-muted-foreground">
                       Direct peer-to-peer sharing for enhanced privacy
                     </p>
