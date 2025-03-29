@@ -240,7 +240,7 @@ function ShareComponent() {
 
               <CardDescription className="text-base">
                 You can share files with end-to-end encryption and a link that
-                automatically expires.
+                automatically expires in 24 hours.
               </CardDescription>
             </div>
 

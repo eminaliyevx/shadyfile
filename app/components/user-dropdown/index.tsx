@@ -4,7 +4,7 @@ import { CreateRoomDialog } from "@/features/room";
 import { useSession } from "@/hooks";
 import { getInitialsFromName, selfOrUndefined } from "@/lib/utils";
 import { Link } from "@tanstack/react-router";
-import { LogOut, Settings, Share2 } from "lucide-react";
+import { Lock, LogOut, Settings, Share2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import {
   DropdownMenu,
@@ -83,6 +83,13 @@ export function UserDropdown() {
           >
             <Share2 />
             Create room
+          </DropdownMenuItem>
+
+          <DropdownMenuItem className="cursor-pointer" asChild>
+            <Link to="/share">
+              <Lock />
+              Share files
+            </Link>
           </DropdownMenuItem>
 
           <DropdownMenuItem className="cursor-pointer" asChild>

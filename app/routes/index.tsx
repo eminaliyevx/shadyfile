@@ -1,17 +1,36 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useDialog } from "@/context";
+import { AuthDialog } from "@/features/auth";
+import { CreateRoomDialog } from "@/features/room";
+import { useSession } from "@/hooks";
 import { env } from "@/lib/env/client";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Lock, Share2, Shield } from "lucide-react";
+import { ArrowRight, Lock, Share2 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   component: Index,
 });
 
 function Index() {
+  const { isAuthenticated } = useSession();
+  const { open } = useDialog();
+
+  function openCreateRoomDialog() {
+    open({
+      isAlert: true,
+      content: (dialog) => <CreateRoomDialog dialog={dialog} />,
+    });
+  }
+
+  function openAuthDialog() {
+    open({
+      content: (dialog) => <AuthDialog dialog={dialog} />,
+    });
+  }
+
   return (
     <div className="relative">
-      {/* Background decoration */}
       <div className="absolute inset-0 -z-10 overflow-hidden">
         <div
           className="absolute top-0 left-1/2 -translate-x-1/2 blur-3xl"
@@ -21,7 +40,6 @@ function Index() {
         </div>
       </div>
 
-      {/* Hero content */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="py-12 sm:py-16 lg:py-20">
           <div className="text-center">
@@ -32,22 +50,34 @@ function Index() {
               A modern and secure file sharing platform with end-to-end
               encryption and peer-to-peer capabilities.
             </p>
-            <div className="mt-10 flex items-center justify-center gap-x-6">
-              <Button size="lg">
-                Get started
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="lg">
-                Learn more
-              </Button>
+            <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+              {isAuthenticated ? (
+                <>
+                  <Button size="lg" onClick={openCreateRoomDialog}>
+                    <Share2 />
+                    Create room
+                  </Button>
+
+                  <Link to="/share">
+                    <Button size="lg">
+                      <Lock />
+                      E2EE file sharing
+                    </Button>
+                  </Link>
+                </>
+              ) : (
+                <Button size="lg" onClick={openAuthDialog}>
+                  Get started
+                  <ArrowRight />
+                </Button>
+              )}
             </div>
           </div>
 
-          {/* Feature cards */}
           <div className="mx-auto mt-16 max-w-5xl sm:mt-20">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
-              <Link to="/share" className="cursor-pointer">
-                <Card className="h-full transition-transform hover:scale-105 hover:shadow-md">
+            <div className="mx-auto max-w-2xl">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:gap-6">
+                <Card className="h-full">
                   <CardContent className="flex h-full flex-col items-center p-6 text-center">
                     <div className="rounded-full bg-primary/10 p-3">
                       <Lock className="h-6 w-6 text-primary" />
@@ -61,33 +91,19 @@ function Index() {
                     </p>
                   </CardContent>
                 </Card>
-              </Link>
 
-              <Card className="h-full">
-                <CardContent className="flex h-full flex-col items-center p-6 text-center">
-                  <div className="rounded-full bg-primary/10 p-3">
-                    <Share2 className="h-6 w-6 text-primary" />
-                  </div>
-                  <h3 className="mt-4 font-semibold">P2P File Transfer</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Direct peer-to-peer sharing for faster transfers and
-                    enhanced privacy
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="h-full sm:col-span-2 lg:col-span-1">
-                <CardContent className="flex h-full flex-col items-center p-6 text-center">
-                  <div className="rounded-full bg-primary/10 p-3">
-                    <Shield className="h-6 w-6 text-primary" />
-                  </div>
-                  <h3 className="mt-4 font-semibold">Hybrid Storage</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Choose between P2P sharing or secure server storage for
-                    reliable access
-                  </p>
-                </CardContent>
-              </Card>
+                <Card className="h-full">
+                  <CardContent className="flex h-full flex-col items-center p-6 text-center">
+                    <div className="rounded-full bg-primary/10 p-3">
+                      <Share2 className="h-6 w-6 text-primary" />
+                    </div>
+                    <h3 className="mt-4 font-semibold">P2P File Transfer</h3>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Direct peer-to-peer sharing for enhanced privacy
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </div>
         </div>
