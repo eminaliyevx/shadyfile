@@ -26,6 +26,7 @@ export type DialogInstance = DialogOptions & {
 type DialogContextType = {
   open: (options: DialogOptions) => string;
   close: (id: string) => void;
+  closeAll: () => void;
 };
 
 const DialogContext = createContext<Nullable<DialogContextType>>(null);
@@ -72,6 +73,16 @@ export function DialogProvider({ children }: PropsWithChildren) {
     return id;
   }
 
+  function closeAll() {
+    setDialogs((dialogs) =>
+      dialogs.map((dialog) => ({ ...dialog, isOpen: false })),
+    );
+
+    setTimeout(() => {
+      setDialogs([]);
+    }, 200);
+  }
+
   function handleDialogOpenChange(isOpen: boolean, id: string) {
     if (!isOpen) {
       close(id);
@@ -79,7 +90,7 @@ export function DialogProvider({ children }: PropsWithChildren) {
   }
 
   return (
-    <DialogContext.Provider value={{ open, close }}>
+    <DialogContext.Provider value={{ open, close, closeAll }}>
       {children}
 
       {dialogs.map((dialog) =>

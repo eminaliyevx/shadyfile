@@ -14,12 +14,15 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { Input, PasswordInput } from "@/components/ui/input";
 import { useDialog } from "@/context";
 import { useAuth, useSession } from "@/hooks";
-import { DialogProps, getErrorMessage } from "@/lib";
+import { getErrorMessage } from "@/lib";
+import { updatePassword } from "@/lib/server/fn";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { BetterFetchError } from "better-auth/react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -29,16 +32,21 @@ const schema = z.object({
   code: z.string().min(1, {
     message: getErrorMessage("required", "Backup code"),
   }),
+  password: z.string().min(8, {
+    message: getErrorMessage("min", "Password", 8),
+  }),
 });
 
-export function VerifyBackupCodeDialog({ dialog }: DialogProps) {
+export function VerifyBackupCodeDialog() {
   const router = useRouter();
 
   const { refetchSession } = useSession();
 
   const { authClient } = useAuth();
 
-  const { close } = useDialog();
+  const updatePasswordFn = useServerFn(updatePassword);
+
+  const { closeAll } = useDialog();
 
   const [loading, setLoading] = useState(false);
 
@@ -46,6 +54,7 @@ export function VerifyBackupCodeDialog({ dialog }: DialogProps) {
     resolver: zodResolver(schema),
     defaultValues: {
       code: "",
+      password: "",
     },
   });
 
@@ -55,19 +64,26 @@ export function VerifyBackupCodeDialog({ dialog }: DialogProps) {
         setLoading(true);
       },
       onSuccess: async () => {
-        close(dialog.id);
+        try {
+          await updatePasswordFn({ data });
 
-        toast.success("Your account has been recovered");
+          await refetchSession();
 
-        await refetchSession();
+          await router.navigate({ to: "/" });
 
-        await router.navigate({ to: "/" });
+          setLoading(false);
+
+          toast.success("Your account has been recovered");
+        } catch (error: unknown) {
+          toast.error((error as BetterFetchError).message);
+        } finally {
+          closeAll();
+        }
       },
       onError: ({ error }) => {
-        toast.error(error.message);
-      },
-      onResponse: () => {
         setLoading(false);
+
+        toast.error(error.message);
       },
     });
   }
@@ -84,6 +100,7 @@ export function VerifyBackupCodeDialog({ dialog }: DialogProps) {
         <form
           id="verifyBackupCodeForm"
           onSubmit={form.handleSubmit(handleSubmit)}
+          className="space-y-4"
         >
           <FormField
             control={form.control}
@@ -100,6 +117,22 @@ export function VerifyBackupCodeDialog({ dialog }: DialogProps) {
               </FormItem>
             )}
           />
+
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Password</FormLabel>
+
+                <FormControl>
+                  <PasswordInput {...field} />
+                </FormControl>
+
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </form>
       </Form>
 
@@ -109,7 +142,7 @@ export function VerifyBackupCodeDialog({ dialog }: DialogProps) {
         </DialogClose>
 
         <Button type="submit" form="verifyBackupCodeForm" loading={loading}>
-          Verify
+          Recover
         </Button>
       </DialogFooter>
     </DialogContent>

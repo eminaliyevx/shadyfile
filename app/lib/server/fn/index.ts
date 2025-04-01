@@ -67,6 +67,28 @@ export const getBackupCodes = createServerFn()
     });
   });
 
+export const updatePassword = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((data: { password: string }) =>
+    z.object({ password: z.string().min(8) }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    try {
+      const ctx = await auth.$context;
+
+      const hash = await ctx.password.hash(data.password);
+
+      await ctx.internalAdapter.updatePassword(context.session.user.id, hash);
+
+      return { success: true };
+    } catch {
+      throw createError({
+        status: 400,
+        message: "Failed to recover your account",
+      });
+    }
+  });
+
 export const createRoom = createServerFn()
   .middleware([authMiddleware])
   .handler(async ({ context }) => {

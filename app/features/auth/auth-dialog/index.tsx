@@ -94,14 +94,14 @@ export function AuthDialog({ dialog }: DialogProps) {
         } else {
           await refetchSession();
         }
+
+        close(dialog.id);
       },
       onError: ({ error }) => {
         toast.error(error.message);
       },
       onResponse: () => {
         setLoading(false);
-
-        close(dialog.id);
       },
     });
   }
@@ -118,14 +118,14 @@ export function AuthDialog({ dialog }: DialogProps) {
         },
         onSuccess: async () => {
           await refetchSession();
+
+          close(dialog.id);
         },
         onError: ({ error }) => {
           toast.error(error.message);
         },
         onResponse: () => {
           setLoading(false);
-
-          close(dialog.id);
         },
       },
     );
@@ -133,7 +133,7 @@ export function AuthDialog({ dialog }: DialogProps) {
 
   function openVerifyBackupCodeDialog() {
     open({
-      content: (dialog) => <VerifyBackupCodeDialog dialog={dialog} />,
+      content: () => <VerifyBackupCodeDialog />,
     });
   }
 
