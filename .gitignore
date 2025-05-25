@@ -6,3 +6,4 @@ drizzle/
 !.env.example
 uploads/
 *_content.md
+redis-diagram.md
