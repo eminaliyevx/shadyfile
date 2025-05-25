@@ -31,13 +31,18 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDialog } from "@/context";
-import { useCopyToClipboard, useSession } from "@/hooks";
+import { ECDHKeyPair, useCopyToClipboard, useECDH, useSession } from "@/hooks";
 import {
+  base64ToUint8Array,
   cn,
+  decryptData,
+  encryptData,
   formatFileSize,
+  generateRandomKey,
   Nullable,
   safeJsonParse,
   selfOrUndefined,
+  uint8ArrayToBase64,
   WebSocketMessage,
   WebSocketMessageErrorEnum,
   webSocketMessageSchema,
@@ -77,15 +82,26 @@ type FileTransfer = {
   downloadUrl?: string;
 };
 
-type FileMessage = {
-  type: "file-info" | "file-chunk" | "file-complete" | "file-error";
+type FileInfoMessage = {
+  type: "file-info";
   fileId: string;
-  fileName?: string;
-  fileSize?: number;
-  fileType?: string;
-  chunkIndex?: number;
-  totalChunks?: number;
-  error?: string;
+  fileName: string;
+  fileSize: number;
+  fileType: string;
+  totalChunks: number;
+};
+
+type ChunkInfoMessage = {
+  fileId: string;
+  chunkIndex: number;
+  totalChunks: number;
+  isLastChunk: boolean;
+};
+
+type FileErrorMessage = {
+  type: "file-error";
+  fileId: string;
+  error: string;
 };
 
 const CHUNK_SIZE = 16 * 1024;
@@ -118,10 +134,16 @@ function RoomComponent() {
 
   const { open } = useDialog();
 
+  const { generateKeyPair, importPublicKey, deriveSharedSecret, deriveAESKey } =
+    useECDH();
+
   const [you, setYou] = useState<Nullable<RoomUser>>(null);
   const [peer, setPeer] = useState<Nullable<RoomUser>>(null);
   const [connected, setConnected] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const [keyPair, setKeyPair] = useState<Nullable<ECDHKeyPair>>(null);
+  const [secretKey, setSecretKey] = useState<Nullable<CryptoKey>>(null);
 
   const [selectedFiles, setSelectedFiles] = useState<Nullable<File[]>>(null);
   const [sendingFiles, setSendingFiles] = useState<FileTransfer[]>([]);
@@ -136,209 +158,263 @@ function RoomComponent() {
   const receivingFilesRef = useRef<FileTransfer[]>([]);
 
   useEffect(() => {
+    const fn = async () => {
+      const keyPair = await generateKeyPair();
+
+      setKeyPair(keyPair);
+    };
+
+    fn();
+  }, [generateKeyPair]);
+
+  useEffect(() => {
     receivingFilesRef.current = receivingFiles;
   }, [receivingFiles]);
 
-  const handleDataChannelMessage = useCallback((data: unknown) => {
-    try {
-      if (typeof data === "string") {
-        const message: FileMessage = JSON.parse(data);
-
-        switch (message.type) {
-          case "file-info": {
-            if (message.fileId && message.fileName && message.fileSize) {
-              try {
-                const fileStream = streamsaver.createWriteStream(
-                  message.fileName,
-                );
-                const writer = fileStream.getWriter();
-
-                setReceivingFiles((value) => {
-                  const newFiles = [
-                    ...value,
-                    {
-                      id: message.fileId as string,
-                      name: message.fileName as string,
-                      size: message.fileSize as number,
-                      type: message.fileType as string,
-                      progress: 0,
-                      status: "pending",
-                      writer: writer as WritableStreamDefaultWriter<Uint8Array>,
-                    } satisfies FileTransfer,
-                  ];
-
-                  receivingFilesRef.current = newFiles;
-
-                  return newFiles;
-                });
-
-                currentFileReceiving.current = {
-                  fileId: message.fileId as string,
-                  chunkIndex: 0,
-                };
-              } catch {
-                if (webRTCPeer.current) {
-                  webRTCPeer.current.send(
-                    JSON.stringify({
-                      type: "file-error",
-                      fileId: message.fileId,
-                      error: "Failed to create download stream",
-                    }),
-                  );
-                }
-
-                toast.error("Failed to create download stream");
-              }
-            }
-
-            break;
-          }
-
-          case "file-chunk": {
-            if (message.fileId) {
-              currentFileReceiving.current = {
-                fileId: message.fileId,
-                chunkIndex: message.chunkIndex || 0,
-              };
-            }
-
-            break;
-          }
-
-          case "file-complete": {
-            if (message.fileId) {
-              const fileIndex = receivingFilesRef.current.findIndex(
-                (f) => f.id === message.fileId,
-              );
-
-              if (
-                fileIndex >= 0 &&
-                receivingFilesRef.current[fileIndex].writer
-              ) {
-                receivingFilesRef.current[fileIndex].writer.close();
-
-                setReceivingFiles((value) => {
-                  const newFiles = [...value];
-
-                  newFiles[fileIndex] = {
-                    ...newFiles[fileIndex],
-                    progress: 100,
-                    status: "completed",
-                    writer: undefined,
-                  };
-
-                  receivingFilesRef.current = newFiles;
-
-                  return newFiles;
-                });
-              }
-            }
-
-            break;
-          }
-
-          case "file-error":
-            if (message.fileId) {
-              const fileIndex = receivingFilesRef.current.findIndex(
-                (f) => f.id === message.fileId,
-              );
-
-              if (
-                fileIndex >= 0 &&
-                receivingFilesRef.current[fileIndex].writer
-              ) {
-                receivingFilesRef.current[fileIndex].writer.abort();
-
-                setReceivingFiles((value) => {
-                  const newFiles = [...value];
-
-                  newFiles[fileIndex] = {
-                    ...newFiles[fileIndex],
-                    status: "error",
-                    error: message.error || "An error occurred",
-                    writer: undefined,
-                  };
-
-                  receivingFilesRef.current = newFiles;
-
-                  return newFiles;
-                });
-              }
-            }
-
-            break;
+  const handleChunkData = useCallback(
+    async (data: Uint8Array) => {
+      try {
+        // Read the length of chunk info (first 4 bytes)
+        if (data.length < 4) {
+          throw new Error("Invalid chunk data: too short");
         }
-      } else if (data instanceof ArrayBuffer || data instanceof Uint8Array) {
-        if (currentFileReceiving.current) {
-          const { fileId, chunkIndex } = currentFileReceiving.current;
 
+        const chunkInfoLength = new DataView(
+          data.buffer,
+          data.byteOffset,
+          4,
+        ).getUint32(0, true);
+
+        if (data.length < 4 + chunkInfoLength) {
+          throw new Error("Invalid chunk data: chunk info length mismatch");
+        }
+
+        // Extract chunk info JSON
+        const chunkInfoBytes = data.slice(4, 4 + chunkInfoLength);
+        const chunkInfoString = new TextDecoder().decode(chunkInfoBytes);
+        const chunkInfo: ChunkInfoMessage = JSON.parse(chunkInfoString);
+
+        // Extract actual chunk data
+        let chunkData = data.slice(4 + chunkInfoLength);
+
+        // Find the file being received
+        const fileIndex = receivingFilesRef.current.findIndex(
+          (f) => f.id === chunkInfo.fileId,
+        );
+
+        if (fileIndex < 0 || !receivingFilesRef.current[fileIndex].writer) {
+          throw new Error("File not found or writer not available");
+        }
+
+        const file = receivingFilesRef.current[fileIndex];
+
+        // Decrypt chunk if we have a shared secret key
+        if (secretKey && chunkData.length > 16) {
+          try {
+            const iv = chunkData.slice(0, 16);
+            const encryptedData = chunkData.slice(16);
+
+            const decryptedData = await decryptData(
+              encryptedData,
+              secretKey,
+              iv,
+            );
+            chunkData = new Uint8Array(decryptedData);
+          } catch (decryptError) {
+            console.error("Failed to decrypt chunk:", decryptError);
+            throw new Error("Failed to decrypt chunk");
+          }
+        }
+
+        // Write chunk to file
+        if (!file.writer) {
+          throw new Error("File writer not available");
+        }
+        await file.writer.write(chunkData);
+
+        // Update progress
+        const bytesReceived = (chunkInfo.chunkIndex + 1) * CHUNK_SIZE;
+        const progress = Math.min(
+          Math.round((bytesReceived / file.size) * 100),
+          chunkInfo.isLastChunk ? 100 : 99,
+        );
+
+        setReceivingFiles((value) => {
+          const newFiles = [...value];
+          newFiles[fileIndex] = {
+            ...newFiles[fileIndex],
+            progress,
+            status: chunkInfo.isLastChunk ? "completed" : "transferring",
+          };
+          receivingFilesRef.current = newFiles;
+          return newFiles;
+        });
+
+        // Complete the file if this is the last chunk
+        if (chunkInfo.isLastChunk && file.writer) {
+          file.writer.close();
+
+          setReceivingFiles((value) => {
+            const newFiles = [...value];
+            newFiles[fileIndex] = {
+              ...newFiles[fileIndex],
+              writer: undefined,
+            };
+            receivingFilesRef.current = newFiles;
+            return newFiles;
+          });
+
+          toast.success(`File "${file.name}" received successfully`);
+        }
+
+        // Update current receiving state
+        currentFileReceiving.current = {
+          fileId: chunkInfo.fileId,
+          chunkIndex: chunkInfo.chunkIndex + 1,
+        };
+      } catch (error) {
+        console.error("Failed to handle chunk data:", error);
+
+        // Try to find the file and mark it as error
+        if (currentFileReceiving.current) {
           const fileIndex = receivingFilesRef.current.findIndex(
-            (f) => f.id === fileId,
+            (f) => f.id === currentFileReceiving.current!.fileId,
           );
 
-          if (fileIndex >= 0 && receivingFilesRef.current[fileIndex].writer) {
-            try {
-              const chunk =
-                data instanceof ArrayBuffer ? new Uint8Array(data) : data;
+          if (fileIndex >= 0) {
+            const file = receivingFilesRef.current[fileIndex];
 
-              receivingFilesRef.current[fileIndex].writer.write(chunk);
+            if (file.writer) {
+              file.writer.abort();
+            }
 
-              const bytesReceived = (chunkIndex + 1) * CHUNK_SIZE;
-              const totalSize = receivingFilesRef.current[fileIndex].size;
-              const progress = Math.min(
-                Math.round((bytesReceived / totalSize) * 100),
-                99,
+            setReceivingFiles((value) => {
+              const newFiles = [...value];
+              newFiles[fileIndex] = {
+                ...newFiles[fileIndex],
+                status: "error",
+                error:
+                  error instanceof Error
+                    ? error.message
+                    : "Failed to process chunk",
+                writer: undefined,
+              };
+              receivingFilesRef.current = newFiles;
+              return newFiles;
+            });
+
+            // Send error back to sender
+            if (webRTCPeer.current) {
+              webRTCPeer.current.send(
+                JSON.stringify({
+                  type: "file-error",
+                  fileId: currentFileReceiving.current.fileId,
+                  error:
+                    error instanceof Error
+                      ? error.message
+                      : "Failed to process chunk",
+                } satisfies FileErrorMessage),
               );
+            }
+          }
+        }
+
+        toast.error("Failed to save file chunk");
+      }
+    },
+    [secretKey],
+  );
+
+  const handleDataChannelMessage = useCallback(
+    async (data: unknown) => {
+      try {
+        if (typeof data === "string") {
+          // Handle file info messages
+          const message: FileInfoMessage | FileErrorMessage = JSON.parse(data);
+
+          if (message.type === "file-info") {
+            try {
+              const fileStream = streamsaver.createWriteStream(
+                message.fileName,
+              );
+              const writer = fileStream.getWriter();
 
               setReceivingFiles((value) => {
-                const newFiles = [...value];
+                const newFiles = [
+                  ...value,
+                  {
+                    id: message.fileId,
+                    name: message.fileName,
+                    size: message.fileSize,
+                    type: message.fileType,
+                    progress: 0,
+                    status: "pending",
+                    writer: writer as WritableStreamDefaultWriter<Uint8Array>,
+                  } satisfies FileTransfer,
+                ];
 
-                newFiles[fileIndex] = {
-                  ...newFiles[fileIndex],
-                  progress,
-                  status: "transferring",
-                };
-
+                receivingFilesRef.current = newFiles;
                 return newFiles;
               });
 
-              currentFileReceiving.current.chunkIndex++;
-            } catch {
-              setReceivingFiles((value) => {
-                const newFiles = [...value];
-
-                newFiles[fileIndex] = {
-                  ...newFiles[fileIndex],
-                  status: "error",
-                  error: "Failed to write data",
-                  writer: undefined,
-                };
-
-                return newFiles;
-              });
+              currentFileReceiving.current = {
+                fileId: message.fileId,
+                chunkIndex: 0,
+              };
+            } catch (error) {
+              console.error("Failed to create download stream:", error);
 
               if (webRTCPeer.current) {
                 webRTCPeer.current.send(
                   JSON.stringify({
                     type: "file-error",
-                    fileId,
-                    error: "Failed to write data",
-                  }),
+                    fileId: message.fileId,
+                    error: "Failed to create download stream",
+                  } satisfies FileErrorMessage),
                 );
               }
 
-              toast.error("Failed to save file chunk");
+              toast.error("Failed to create download stream");
             }
+          } else if (message.type === "file-error") {
+            const fileIndex = receivingFilesRef.current.findIndex(
+              (f) => f.id === message.fileId,
+            );
+
+            if (fileIndex >= 0 && receivingFilesRef.current[fileIndex].writer) {
+              receivingFilesRef.current[fileIndex].writer.abort();
+
+              setReceivingFiles((value) => {
+                const newFiles = [...value];
+                newFiles[fileIndex] = {
+                  ...newFiles[fileIndex],
+                  status: "error",
+                  error: message.error,
+                  writer: undefined,
+                };
+                receivingFilesRef.current = newFiles;
+                return newFiles;
+              });
+            }
+
+            toast.error(`File transfer error: ${message.error}`);
           }
+        } else if (data instanceof ArrayBuffer || data instanceof Uint8Array) {
+          // Handle binary chunk data
+          await handleChunkData(
+            data instanceof ArrayBuffer ? new Uint8Array(data) : data,
+          );
         }
+      } catch (error) {
+        console.error("Failed to process received data:", error);
+        toast.error("Failed to process received data");
       }
-    } catch {
-      toast.error("Failed to process received data");
-    }
-  }, []);
+    },
+    [handleChunkData],
+  );
 
   const handleRoomJoined = useCallback(
-    (message: Extract<WebSocketMessage, { type: "room-joined" }>) => {
+    async (message: Extract<WebSocketMessage, { type: "room-joined" }>) => {
       setYou({
         id: message.data.id,
         username: message.data.username,
@@ -355,16 +431,31 @@ function RoomComponent() {
   );
 
   const handlePeerJoined = useCallback(
-    (message: Extract<WebSocketMessage, { type: "peer-joined" }>) => {
+    async (message: Extract<WebSocketMessage, { type: "peer-joined" }>) => {
       setPeer({
         id: message.data.id,
         username: message.data.username,
         isHost: message.data.isHost,
       });
 
+      const publicKey = await crypto.subtle.exportKey(
+        "raw",
+        keyPair?.publicKey as CryptoKey,
+      );
+
+      if (sendJsonMessageRef.current) {
+        sendJsonMessageRef.current<WebSocketMessage>({
+          type: "send-public-key",
+          data: {
+            roomId,
+            publicKey: uint8ArrayToBase64(new Uint8Array(publicKey)),
+          },
+        });
+      }
+
       toast.success("Peer joined the room");
     },
-    [],
+    [keyPair, roomId],
   );
 
   const handlePeerLeft = useCallback(() => {
@@ -449,6 +540,26 @@ function RoomComponent() {
     [you, roomId, iceServers, handleDataChannelMessage],
   );
 
+  const handlePublicKeyReceived = useCallback(
+    async (
+      message: Extract<WebSocketMessage, { type: "public-key-received" }>,
+    ) => {
+      const peerPublicKey = await importPublicKey(
+        base64ToUint8Array(message.data.publicKey),
+      );
+
+      const sharedSecret = await deriveSharedSecret(
+        keyPair?.privateKey as CryptoKey,
+        peerPublicKey,
+      );
+
+      const aesKey = await deriveAESKey(sharedSecret);
+
+      setSecretKey(aesKey);
+    },
+    [keyPair, importPublicKey, deriveSharedSecret, deriveAESKey],
+  );
+
   const handleMessage = useCallback(
     (message: WebSocketMessage) => {
       switch (message.type) {
@@ -468,12 +579,22 @@ function RoomComponent() {
           handlePeerSignal(message);
           break;
 
+        case "public-key-received":
+          handlePublicKeyReceived(message);
+          break;
+
         case "error":
           toast.error(message.data?.message ?? "An error occurred");
           break;
       }
     },
-    [handleRoomJoined, handlePeerJoined, handlePeerLeft, handlePeerSignal],
+    [
+      handleRoomJoined,
+      handlePeerJoined,
+      handlePeerLeft,
+      handlePeerSignal,
+      handlePublicKeyReceived,
+    ],
   );
 
   const { sendJsonMessage } = useWebSocket<WebSocketMessage>(WEBSOCKET_URL, {
@@ -617,6 +738,7 @@ function RoomComponent() {
 
     for (const file of selectedFiles) {
       const fileId = crypto.randomUUID();
+      const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
 
       setSendingFiles((value) => [
         ...value,
@@ -631,12 +753,14 @@ function RoomComponent() {
       ]);
 
       try {
-        const fileInfo: FileMessage = {
+        // Send file info first
+        const fileInfo: FileInfoMessage = {
           type: "file-info",
           fileId,
           fileName: file.name,
           fileSize: file.size,
           fileType: file.type,
+          totalChunks,
         };
 
         webRTCPeer.current.send(JSON.stringify(fileInfo));
@@ -646,37 +770,73 @@ function RoomComponent() {
             if (v.id === fileId) {
               return { ...v, status: "transferring" };
             }
-
             return v;
           });
         });
 
-        const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-
         let transferredBytes = 0;
 
-        let chunkIndex = 0;
-
-        while (chunkIndex < totalChunks) {
+        // Send chunks
+        for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
           const start = chunkIndex * CHUNK_SIZE;
           const end = Math.min(start + CHUNK_SIZE, file.size);
+          const isLastChunk = chunkIndex === totalChunks - 1;
 
           const chunk = await file.slice(start, end).arrayBuffer();
 
-          const chunkInfo: FileMessage = {
-            type: "file-chunk",
+          // Prepare chunk info
+          const chunkInfo: ChunkInfoMessage = {
             fileId,
             chunkIndex,
             totalChunks,
+            isLastChunk,
           };
 
-          webRTCPeer.current?.send(JSON.stringify(chunkInfo));
+          // Encrypt chunk if we have a shared secret key
+          let chunkToSend: Uint8Array;
 
-          webRTCPeer.current?.send(new Uint8Array(chunk));
+          if (secretKey) {
+            try {
+              const iv = generateRandomKey(16);
+              const encryptedData = await encryptData(chunk, secretKey, iv);
+
+              // Combine IV + encrypted data
+              const combinedData = new Uint8Array(
+                iv.length + encryptedData.byteLength,
+              );
+              combinedData.set(iv, 0);
+              combinedData.set(new Uint8Array(encryptedData), iv.length);
+
+              chunkToSend = combinedData;
+            } catch (error) {
+              console.error("Failed to encrypt chunk:", error);
+              throw new Error("Failed to encrypt file chunk");
+            }
+          } else {
+            // Send unencrypted if no shared key
+            chunkToSend = new Uint8Array(chunk);
+          }
+
+          // Create the binary message: [4 bytes length][chunk info JSON][chunk data]
+          const chunkInfoString = JSON.stringify(chunkInfo);
+          const chunkInfoBytes = new TextEncoder().encode(chunkInfoString);
+
+          // Create length prefix (4 bytes, little endian)
+          const lengthBuffer = new ArrayBuffer(4);
+          new DataView(lengthBuffer).setUint32(0, chunkInfoBytes.length, true);
+
+          // Combine all parts
+          const binaryMessage = new Uint8Array(
+            4 + chunkInfoBytes.length + chunkToSend.length,
+          );
+          binaryMessage.set(new Uint8Array(lengthBuffer), 0);
+          binaryMessage.set(chunkInfoBytes, 4);
+          binaryMessage.set(chunkToSend, 4 + chunkInfoBytes.length);
+
+          // Send the binary message
+          webRTCPeer.current.send(binaryMessage);
 
           transferredBytes += chunk.byteLength;
-
-          chunkIndex++;
 
           const progress = Math.round((transferredBytes / file.size) * 100);
 
@@ -685,49 +845,73 @@ function RoomComponent() {
               if (v.id === fileId) {
                 return { ...v, progress };
               }
-
               return v;
             });
           });
 
+          // Add a small delay to prevent overwhelming the data channel
           await new Promise((resolve) => setTimeout(resolve, 10));
+
+          // Check if peer is still connected
+          if (!webRTCPeer.current || webRTCPeer.current.destroyed) {
+            throw new Error("Connection lost during file transfer");
+          }
         }
-
-        const fileComplete: FileMessage = {
-          type: "file-complete",
-          fileId,
-        };
-
-        webRTCPeer.current?.send(JSON.stringify(fileComplete));
 
         setSendingFiles((value) => {
           return value.map((v) => {
             if (v.id === fileId) {
               return { ...v, progress: 100, status: "completed" };
             }
-
             return v;
           });
         });
 
-        toast.success("File sent successfully");
+        toast.success(`File "${file.name}" sent successfully`);
       } catch (error) {
+        console.error("Failed to send file:", error);
+
         setSendingFiles((value) => {
           return value.map((v) => {
             if (v.id === fileId) {
-              return { ...v, status: "error", error: String(error) };
+              return {
+                ...v,
+                status: "error",
+                error:
+                  error instanceof Error
+                    ? error.message
+                    : "Failed to send file",
+              };
             }
-
             return v;
           });
         });
 
-        toast.error("Failed to send file");
-      } finally {
-        setSelectedFiles(null);
+        // Send error message to receiver
+        if (webRTCPeer.current && !webRTCPeer.current.destroyed) {
+          try {
+            webRTCPeer.current.send(
+              JSON.stringify({
+                type: "file-error",
+                fileId,
+                error:
+                  error instanceof Error
+                    ? error.message
+                    : "Failed to send file",
+              } satisfies FileErrorMessage),
+            );
+          } catch (sendError) {
+            console.error("Failed to send error message:", sendError);
+          }
+        }
+
+        toast.error(`Failed to send file "${file.name}"`);
       }
     }
-  }, [connected, selectedFiles]);
+
+    // Clear selected files after processing all files
+    setSelectedFiles(null);
+  }, [connected, selectedFiles, secretKey]);
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-10">
@@ -801,9 +985,17 @@ function RoomComponent() {
                 </div>
 
                 {connected && (
-                  <Button className="cursor-default bg-green-500 hover:bg-green-500">
-                    Connected
-                  </Button>
+                  <div className="flex flex-col gap-2 sm:items-end">
+                    <Button className="cursor-default bg-green-500 hover:bg-green-500">
+                      Connected
+                    </Button>
+
+                    {secretKey && (
+                      <Badge className="bg-blue-500 text-white">
+                        🔐 E2E Encrypted
+                      </Badge>
+                    )}
+                  </div>
                 )}
 
                 {!connected && (

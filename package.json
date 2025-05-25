@@ -75,6 +75,7 @@
     "@types/simple-peer": "^9.11.8",
     "@types/streamsaver": "^2.0.5",
     "@vitejs/plugin-react": "^4.3.4",
+    "drizzle-dbml-generator": "^0.10.0",
     "drizzle-kit": "^0.30.5",
     "eslint": "^9.23.0",
     "eslint-plugin-react": "^7.37.4",
@@ -83,6 +84,7 @@
     "prettier": "^3.5.3",
     "prettier-plugin-organize-imports": "^4.1.0",
     "prettier-plugin-tailwindcss": "^0.6.11",
+    "tsx": "^4.19.4",
     "typescript": "^5.8.2",
     "typescript-eslint": "^8.27.0",
     "vite-tsconfig-paths": "^5.1.4"

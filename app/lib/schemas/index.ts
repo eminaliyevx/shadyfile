@@ -65,6 +65,34 @@ export const webSocketMessageSchema = z.discriminatedUnion("type", [
     }),
   }),
   z.object({
+    type: z.literal("send-public-key"),
+    data: z.object({
+      roomId: z.string().uuid(),
+      publicKey: z.string().min(1),
+    }),
+  }),
+  z.object({
+    type: z.literal("public-key-received"),
+    data: z.object({
+      roomId: z.string().uuid(),
+      publicKey: z.string().min(1),
+    }),
+  }),
+  z.object({
+    type: z.literal("ack-dhke"),
+    data: z.object({
+      roomId: z.string().uuid(),
+      ok: z.boolean(),
+    }),
+  }),
+  z.object({
+    type: z.literal("dhke-acked"),
+    data: z.object({
+      roomId: z.string().uuid(),
+      ok: z.boolean(),
+    }),
+  }),
+  z.object({
     type: z.literal("error"),
     data: z
       .object({

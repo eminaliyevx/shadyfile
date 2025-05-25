@@ -305,7 +305,7 @@ function ShareComponent() {
                 <strong>Size:</strong> <span ref={fileSizeRef}></span>
               </span>
 
-              <span className="text-lg text-muted-foreground">
+              <span className="text-lg break-all text-muted-foreground">
                 <strong>Type:</strong> <span ref={fileTypeRef}></span>
               </span>
             </div>

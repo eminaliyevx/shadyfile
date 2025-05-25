@@ -63,6 +63,11 @@ export default defineEventHandler({
             await handler.forwardSignal(clientMessage);
             break;
           }
+
+          case "send-public-key": {
+            await handler.sendPublicKey(clientMessage);
+            break;
+          }
         }
       } catch (error) {
         consola.error("Invalid message format:", error);
@@ -283,6 +288,28 @@ function webSocketMessageHandler(peer: TypedPeer) {
           },
         });
       }
+    },
+
+    async sendPublicKey(
+      message: Extract<WebSocketMessage, { type: "send-public-key" }>,
+    ) {
+      peer.publish(
+        `room:${message.data.roomId}`,
+        JSON.stringify({
+          type: "public-key-received",
+          data: message.data,
+        }),
+      );
+    },
+
+    async ackDhke(message: Extract<WebSocketMessage, { type: "ack-dhke" }>) {
+      peer.publish(
+        `room:${message.data.roomId}`,
+        JSON.stringify({
+          type: "dhke-acked",
+          data: message.data,
+        }),
+      );
     },
   };
 }

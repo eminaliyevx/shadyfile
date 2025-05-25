@@ -5,3 +5,4 @@ drizzle/
 .env*
 !.env.example
 uploads/
+*_content.md
