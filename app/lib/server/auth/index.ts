@@ -25,5 +25,6 @@ export const auth = betterAuth({
       twoFactor: twoFactorSchema,
     },
   }),
+  trustedOrigins: [env.BETTER_AUTH_TRUSTED_ORIGIN],
   plugins: [username(), twoFactor()],
 });

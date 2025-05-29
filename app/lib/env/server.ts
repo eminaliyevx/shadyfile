@@ -16,6 +16,7 @@ export const env = createEnv({
     APP_TITLE: z.string().min(1),
     APP_PORT: z.coerce.number(),
     BETTER_AUTH_SECRET: z.string().min(1),
+    BETTER_AUTH_TRUSTED_ORIGIN: z.string().url(),
     TWILIO_ACCOUNT_SID: z.string().min(1),
     TWILIO_AUTH_TOKEN: z.string().min(1),
   },
